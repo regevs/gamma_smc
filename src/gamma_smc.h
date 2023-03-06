@@ -36,6 +36,7 @@ class CachedPairwiseGammaSMC {
 
     bool _output_at_hets;
     bool _only_forward;
+    bool _only_backward;
     
     const vector<position_t>& _output_positions;
     const vector<Segment_t>& _segments;
@@ -66,7 +67,8 @@ class CachedPairwiseGammaSMC {
         DataProcessor& data_processor,
         int posterior_every,
         bool output_at_hets,
-        bool only_forward
+        bool only_forward,
+        bool only_backward
     ) : 
         _sites(sites), 
         _scaled_recombination_rate(scaled_recombination_rate),
@@ -80,6 +82,7 @@ class CachedPairwiseGammaSMC {
         _n_pairs_rounded_up(parallel_vector_size * (long) ceil(_n_pairs / float(parallel_vector_size))),
         _output_at_hets(output_at_hets),
         _only_forward(only_forward),
+        _only_backward(only_backward),
         _output_positions(data_processor._output_positions),
         _segments(data_processor._segments),
         _n_segments(data_processor._n_segments),
@@ -101,6 +104,15 @@ class CachedPairwiseGammaSMC {
         // _scaled_backwards_cv = aligned_alloc_float(n_elements, false);
         _posteriors_alpha = aligned_alloc_float(n_elements, true);
         _posteriors_beta = aligned_alloc_float(n_elements, true);
+
+        // If we want backward only, then we need to set it to +1, because the backward
+        // pass subtracts -1.
+        if (_only_backward) {
+            for (size_t i = 0; i < n_elements; i++) {
+                _posteriors_alpha[i] = 1;
+                _posteriors_beta[i] = 1;
+            }
+        }
 
         // Working vector
         _last_processed_mean_log10 = aligned_alloc_float(_n_pairs_rounded_up, false);
@@ -424,11 +436,13 @@ class CachedPairwiseGammaSMC {
         // ms_float = t2 - t1;
         // cout << boost::format("forward() - Done (%f sec)") % (ms_float.count()/1000) << endl;
 
-        t1 = std::chrono::high_resolution_clock::now();
-        forward_vectorized();        
-        t2 = std::chrono::high_resolution_clock::now();
-        ms_float = t2 - t1;
-        cout << boost::format("forward_vectorized() - Done (%f sec)") % (ms_float.count()/1000) << endl;
+        if (!_only_backward) {
+            t1 = std::chrono::high_resolution_clock::now();
+            forward_vectorized();        
+            t2 = std::chrono::high_resolution_clock::now();
+            ms_float = t2 - t1;
+            cout << boost::format("forward_vectorized() - Done (%f sec)") % (ms_float.count()/1000) << endl;
+        }
 
         // t1 = std::chrono::high_resolution_clock::now();
         // forward_vectorized_no_prep();        

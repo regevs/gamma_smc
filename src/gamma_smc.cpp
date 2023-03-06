@@ -32,9 +32,11 @@ int main(int argc, char** argv) {
         // ("log_coords,l", po::value<bool>()->default_value(true), "Use log coordinates in output?")
         ("cache_size,z", po::value<int>()->default_value(1000), "Stride width in basepairs")
         ("only_forward,y", po::value<bool>()->default_value(false), "Calculate only forward")
+        ("only_backward", po::value<bool>()->default_value(false), "Calculate only backward")
         ("output_n_called_file", po::value<string>()->default_value(""), "Filename of n of called")
         ("samples_file,S", po::value<string>()->default_value(""), "Filename of a list of subset of samples to take")
         ("output_samples_file", po::value<string>()->default_value(""), "Filename of a list of subset of samples used in file (in order)")
+        ("entropy_clipping", po::value<bool>()->default_value(false), "Clip by entropy")
     ;
 
     po::positional_options_description p;
@@ -117,7 +119,8 @@ int main(int argc, char** argv) {
             vm["scaled_recombination_rate"].as<float>(),
             vm["scaled_mutation_rate"].as<float>(),
             move(FF),
-            vm["cache_size"].as<int>()
+            vm["cache_size"].as<int>(),
+            vm["entropy_clipping"].as<bool>()
         ));
 
         auto t2 = std::chrono::high_resolution_clock::now();
@@ -143,7 +146,8 @@ int main(int argc, char** argv) {
             data_processor,
             vm["stride"].as<int>(),
             vm["output_at_hets"].as<bool>(),
-            vm["only_forward"].as<bool>()
+            vm["only_forward"].as<bool>(),
+            vm["only_backward"].as<bool>()
         );
 
         // Run
