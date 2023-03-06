@@ -1,8 +1,0 @@
-Requirements:
-- boost
-- Arb, mpfr, flint
-- htslib
-- GSL
-- Eigen
-
-Both functionality and documentation are in progress, and will be updated prior to publication.
