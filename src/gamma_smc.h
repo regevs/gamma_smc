@@ -23,6 +23,7 @@ static inline __m256 _mm256_expfaster_ps(const __m256 &q) {
 class CachedPairwiseGammaSMC {
   public:
     const vector<unique_ptr<SegregatingSite>>& _sites;
+    const vector<pair<int, int>>& _haplotype_pairs;
     float _scaled_recombination_rate;
     float _scaled_mutation_rate;
     unique_ptr<FlowFieldCache> _flow_field_cache;
@@ -30,7 +31,6 @@ class CachedPairwiseGammaSMC {
     int _posterior_every;    
     int _flow_field_cache_n_steps;
 
-    int _n_haplotypes;
     long _n_pairs;
     long _n_pairs_rounded_up;
 
@@ -61,6 +61,7 @@ class CachedPairwiseGammaSMC {
 
     CachedPairwiseGammaSMC(
         const vector<unique_ptr<SegregatingSite>>& sites,
+        const vector<pair<int, int>>& haplotype_pairs,
         float scaled_recombination_rate,
         float scaled_mutation_rate,
         unique_ptr<FlowFieldCache> flow_field_cache,  // TODO: Do we really need unique_ptr rather than const&
@@ -71,14 +72,14 @@ class CachedPairwiseGammaSMC {
         bool only_backward
     ) : 
         _sites(sites), 
+        _haplotype_pairs(haplotype_pairs),
         _scaled_recombination_rate(scaled_recombination_rate),
         _scaled_mutation_rate(scaled_mutation_rate), 
         _flow_field_cache(move(flow_field_cache)),
         _data_processor(data_processor),
         _posterior_every(posterior_every),
         _flow_field_cache_n_steps(_flow_field_cache->_n_steps),
-        _n_haplotypes(_sites.back()->alleles.size()),
-        _n_pairs(((long) _n_haplotypes) * (_n_haplotypes-1) / 2),
+        _n_pairs(_haplotype_pairs.size()),
         _n_pairs_rounded_up(parallel_vector_size * (long) ceil(_n_pairs / float(parallel_vector_size))),
         _output_at_hets(output_at_hets),
         _only_forward(only_forward),
@@ -139,18 +140,16 @@ class CachedPairwiseGammaSMC {
 
         // Start by figuring out the number of called positions within each segment, for each pair
         int32_t* cur_n_called_ptr = _pairwise_n_called;
-        int n_pair = 0;
-        for (int i = 0; i < _n_haplotypes-1; i++) {
-            for (int j = i+1; j < _n_haplotypes; j++) {
-                _data_processor.intersect_masks(
-                    i >> 1,         // First sample ID
-                    j >> 1,         // Second sample ID
-                    cur_n_called_ptr + n_pair,      // Pointer to place in big array
-                    _n_pairs_rounded_up             // Stride into array
-                );
-
-                n_pair++;
-            }
+        
+        int i, j;
+        for (int n_pair = 0; n_pair < _n_pairs; n_pair++) {
+            tie(i, j) = _haplotype_pairs[n_pair];
+            _data_processor.intersect_masks(
+                i >> 1,         // First sample ID
+                j >> 1,         // Second sample ID
+                cur_n_called_ptr + n_pair,      // Pointer to place in big array
+                _n_pairs_rounded_up             // Stride into array
+            );
         }
         
         // Now, for each segment, figure out the emission type. If this segments
@@ -172,17 +171,19 @@ class CachedPairwiseGammaSMC {
             } else {        
                 auto& alleles = _sites[seg_site_index]->alleles;
 
-                for (int i = 0; i < _n_haplotypes-1; i++) {
-                    bool is_missing_i = _data_processor._is_seg_site_missing[i >> 1][seg_site_index];
-                    for (int j = i+1; j < _n_haplotypes; j++) {
-                        bool is_missing_j = _data_processor._is_seg_site_missing[j >> 1][seg_site_index];
-                        if (is_missing_i || is_missing_j) {
-                            (*cur_ptr) = HOM_STRETCH;
-                        } else {                            
-                            (*cur_ptr) = ((alleles[i] ^ alleles[j]) ? HOM_STRETCH_HET_SITE : HOM_STRETCH_HOM_SITE);
-                        }
-                        cur_ptr++;
+                for (int n_pair = 0; n_pair < _n_pairs; n_pair++) {
+                    tie(i, j) = _haplotype_pairs[n_pair];
+                
+                    bool is_missing_i = _data_processor._is_seg_site_missing[i >> 1][seg_site_index];                
+                    bool is_missing_j = _data_processor._is_seg_site_missing[j >> 1][seg_site_index];
+
+                    if (is_missing_i || is_missing_j) {
+                        (*cur_ptr) = HOM_STRETCH;
+                    } else {                            
+                        (*cur_ptr) = ((alleles[i] ^ alleles[j]) ? HOM_STRETCH_HET_SITE : HOM_STRETCH_HOM_SITE);
                     }
+                    cur_ptr++;
+                
                 }
 
                 memset((void*) cur_ptr, MISSING_STRETCH_MISSING_SITE, _n_pairs_rounded_up - _n_pairs); // Doesn't matter, just a default
@@ -495,12 +496,14 @@ class CachedPairwiseGammaSMC {
         //     output_file << "\n";
         // }
         output_file << "position";
-        for (int i = 0; i < _n_haplotypes-1; i++) {
-            for (int j = i+1; j < _n_haplotypes; j++) {
-                output_file << 
-                    boost::format("\tposterior_alpha_%d_%d\tposterior_beta_%d_%d")
-                       % i % j % i % j;
-            }
+        
+        int i, j;
+        for (int n_pair = 0; n_pair < _n_pairs; n_pair++) {
+            tie(i, j) = _haplotype_pairs[n_pair];
+
+            output_file << 
+                boost::format("\tposterior_alpha_%d_%d\tposterior_beta_%d_%d")
+                    % i % j % i % j;            
         }
         output_file << "\n";
         
@@ -525,6 +528,12 @@ class CachedPairwiseGammaSMC {
         // Write the positions
         for (uint i = 0; i < _seq_length; i++) {
             output_file.write(reinterpret_cast<const char*>(&_output_positions[i]), sizeof(long));
+        }
+
+        // Write the pairs
+        for (uint i = 0; i < _n_pairs; i++) {
+            output_file.write(reinterpret_cast<const char*>(&_haplotype_pairs[i].first), sizeof(int));
+            output_file.write(reinterpret_cast<const char*>(&_haplotype_pairs[i].second), sizeof(int));
         }
 
         // Write alphas and betas

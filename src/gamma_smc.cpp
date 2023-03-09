@@ -1,5 +1,6 @@
 #include "common.h"
 
+#include "sys.h"
 #include "io.h"
 #include "flow_field.h"
 #include "gamma_smc.h"
@@ -54,7 +55,7 @@ int main(int argc, char** argv) {
     // Load input file
     //vector<SegSite_t> input_sites;
     vector<unique_ptr<SegregatingSite>> input_sites;  // TODO: Have another go at getting rid of the unique_ptr and just have vector<Seg...>
-    vector<string> sample_names;
+    vector<string> sample_names;    
 
     // readSegSitesAll(vm["input_file"].as<string>(), input_sites);
     readVcf(vm["input_file"].as<string>(), input_sites, sample_names, vm["samples_file"].as<string>()); 
@@ -92,6 +93,16 @@ int main(int argc, char** argv) {
     //     if (bb > 10) { break; }
     // }
     cout << boost::format("Loaded file, with %d sites\n") % input_sites.size() << endl;
+
+    // Create a list of pairs to work on
+    vector<pair<int, int>> haplotype_pairs;
+    int n_haplotypes = sample_names.size() * 2;
+    for (int i = 0; i < n_haplotypes; i++) {
+        for (int j = i+1; j < n_haplotypes; j++) {
+            haplotype_pairs.push_back(make_pair(i, j));
+        }
+    }
+
 
     // Load flow field file
     vector<float> mean_grid_def;
@@ -140,6 +151,7 @@ int main(int argc, char** argv) {
 
         CachedPairwiseGammaSMC PPC(
             input_sites,
+            haplotype_pairs,
             vm["scaled_recombination_rate"].as<float>(),
             vm["scaled_mutation_rate"].as<float>(),
             move(FFC),
@@ -283,5 +295,8 @@ int main(int argc, char** argv) {
 
     }
 */
+
+    fprintf(stderr, "\nCPU: %.3f sec; Peak RSS: %.3f GB\n",mp_cputime(), mp_peakrss() / 1024.0 / 1024.0 / 1024.0);	
+
     return 0;
 }
