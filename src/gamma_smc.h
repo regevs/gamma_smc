@@ -46,6 +46,7 @@ class CachedPairwiseGammaSMC {
     position_t _seq_length;
 
     ostream* _output_file;
+    ofstream* _output_file_raw_header;
     ostream* _output_file_raw;
 
     // TODO: allocate less memory
@@ -75,6 +76,7 @@ class CachedPairwiseGammaSMC {
         bool only_forward,
         bool only_backward,
         ostream* output_file,
+        ofstream* output_file_raw_header,
         ostream* output_file_raw
     ) : 
         _sites(sites), 
@@ -96,6 +98,7 @@ class CachedPairwiseGammaSMC {
         _n_segments(data_processor._n_segments),
         _seq_length(data_processor._seq_length),
         _output_file(output_file),
+        _output_file_raw_header(output_file_raw_header),
         _output_file_raw(output_file_raw)
     {        
         // Allocate memory
@@ -469,13 +472,14 @@ class CachedPairwiseGammaSMC {
             tie(i, j) = _haplotype_pairs[n_pair];
 
             // Output a row of alphas
-            *_output_file << boost::format("\tposterior_alpha_%d_%d") % i % j;
+            *_output_file << boost::format("posterior_alpha_%d_%d") % i % j;
             for (uint t = 0; t < _seq_length; t++) {
                 *_output_file << "\t" << _posteriors_alpha[t * num_pairs + (n_pair - starting_n_pair)];  
             }
+            *_output_file << "\n";
 
             // Output a row of betas
-            *_output_file << boost::format("\tposterior_beta_%d_%d") % i % j;
+            *_output_file << boost::format("posterior_beta_%d_%d") % i % j;
             for (uint t = 0; t < _seq_length; t++) {
                 *_output_file << "\t" << _posteriors_beta[t * num_pairs + (n_pair - starting_n_pair)];                  
             }
@@ -487,44 +491,44 @@ class CachedPairwiseGammaSMC {
 
 
     void output_raw_header() {           
+        (*_output_file_raw_header) << "{\n";
+
         // Write the sequence length
-        _output_file_raw->write(reinterpret_cast<const char*>(&_seq_length), sizeof(long));     
+        (*_output_file_raw_header) << boost::format("\t\"sequence_length\": %ld,\n") % _seq_length;        
+        
+        // Write the chunk size
+        (*_output_file_raw_header) << boost::format("\t\"chunk_size\": %ld,\n") % _n_pairs_in_chunk;        
 
         // Write the number of pairs
-        _output_file_raw->write(reinterpret_cast<const char*>(&_n_pairs), sizeof(long));
+        (*_output_file_raw_header) << boost::format("\t\"num_pairs\": %ld,\n") % _n_pairs;        
 
         // Write the positions
-        for (uint i = 0; i < _seq_length; i++) {
-            _output_file_raw->write(reinterpret_cast<const char*>(&_output_positions[i]), sizeof(long));
+        (*_output_file_raw_header) << boost::format("\t\"output_positions\": [\n\t\t");
+        for (uint i = 0; i < _seq_length; i++) {            
+            (*_output_file_raw_header) << boost::format("%ld%c ") % _output_positions[i] % ((i == _seq_length-1) ? "" : ",");
         }
+        (*_output_file_raw_header) << boost::format("\n\t],\n");        
 
         // Write the pairs
+        (*_output_file_raw_header) << boost::format("\t\"pairs\": [\n\t\t");
         for (uint i = 0; i < _n_pairs; i++) {
-            _output_file_raw->write(reinterpret_cast<const char*>(&_haplotype_pairs[i].first), sizeof(int));
-            _output_file_raw->write(reinterpret_cast<const char*>(&_haplotype_pairs[i].second), sizeof(int));
+            (*_output_file_raw_header) << boost::format("[%d, %d]%c ") % _haplotype_pairs[i].first % _haplotype_pairs[i].second % ((i == _n_pairs-1) ? "" : ",");
         }
+        (*_output_file_raw_header) << boost::format("\n\t]\n");  
+        (*_output_file_raw_header) << ("}\n");
     }
 
-    // TODO: This may be slow because it jumps all over memory, fix?
-    void output_raw_chunk(long starting_n_pair, long num_pairs) {           
-        for (int n_pair = starting_n_pair; n_pair < min(_n_pairs, starting_n_pair + num_pairs); n_pair++) {        
-            // Write alphas
-            for (uint t = 0; t < _seq_length; t++) {
-                _output_file_raw->write(
-                    reinterpret_cast<const char*>(_posteriors_alpha + t * num_pairs + (n_pair - starting_n_pair)), 
-                    sizeof(float) * 1
-                );                
-            }
+    // This just dumps the memory, so it later needs to be loaded in a particular way
+    void output_raw_chunk(long starting_n_pair, long num_pairs) { 
+        _output_file_raw->write(
+            reinterpret_cast<const char*>(_posteriors_alpha), 
+            sizeof(float) * _seq_length * _n_pairs_in_chunk
+        );
 
-            // Write betas
-            for (uint t = 0; t < _seq_length; t++) {
-                _output_file_raw->write(
-                    reinterpret_cast<const char*>(_posteriors_beta + t * num_pairs + (n_pair - starting_n_pair)), 
-                    sizeof(float) * 1
-                );                
-            }
-        }
-        
+        _output_file_raw->write(
+            reinterpret_cast<const char*>(_posteriors_beta), 
+            sizeof(float) * _seq_length * _n_pairs_in_chunk
+        ); 
     }
 
     void calculate_posteriors() {
@@ -545,14 +549,14 @@ class CachedPairwiseGammaSMC {
             auto t2 = std::chrono::high_resolution_clock::now();
 
             std::chrono::duration<float, std::milli> ms_float = t2 - t1;
-            cout << boost::format("prepare_pairwise_emissions() - Done (%f sec)") % (ms_float.count()/1000) << endl;
+            // cout << boost::format("prepare_pairwise_emissions() - Done (%f sec)") % (ms_float.count()/1000) << endl;
 
             if (!_only_backward) {
                 t1 = std::chrono::high_resolution_clock::now();
                 forward_vectorized(n_pair, _n_pairs_in_chunk);        
                 t2 = std::chrono::high_resolution_clock::now();
                 ms_float = t2 - t1;
-                cout << boost::format("forward_vectorized() - Done (%f sec)") % (ms_float.count()/1000) << endl;
+                // cout << boost::format("forward_vectorized() - Done (%f sec)") % (ms_float.count()/1000) << endl;
             }
 
             if (!_only_forward) {
@@ -560,7 +564,7 @@ class CachedPairwiseGammaSMC {
                 backward_vectorized(n_pair, _n_pairs_in_chunk);
                 t2 = std::chrono::high_resolution_clock::now();
                 ms_float = t2 - t1;
-                cout << boost::format("backward_vectorized() - Done (%f sec)") % (ms_float.count()/1000) << endl;
+                // cout << boost::format("backward_vectorized() - Done (%f sec)") % (ms_float.count()/1000) << endl;
             }
 
             if (_output_file != NULL) {

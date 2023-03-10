@@ -25,7 +25,7 @@ int main(int argc, char** argv) {
         ("flow_field_file,f", po::value<string>(), "Flow field file")
         ("input_file,i", po::value<string>(), "Input file")
         ("beds_file,b", po::value<string>(), "File of bed filenames (empty for no masks)")
-        ("output_file,o", po::value<string>()->default_value(""), "Output file")
+        ("output_file,o", po::value<string>()->default_value(""), "Output file in text format (recommended only for small datasets!)")
         ("output_raw_file,w", po::value<string>()->default_value(""), "Output raw file")
         ("stride,s", po::value<int>()->default_value(-1), "Output posterior every")
         ("output_at_hets,h", po::value<bool>()->default_value(false), "Output at hets")
@@ -130,6 +130,7 @@ int main(int argc, char** argv) {
     }
 
     ostream* out_raw = NULL;
+    ofstream* output_file_raw_meta = NULL;
     ofstream* output_file_raw = NULL;
     boost::iostreams::filtering_streambuf<boost::iostreams::output> outbuf_raw;
     if (vm["output_raw_file"].as<string>().size() > 0) {
@@ -140,6 +141,8 @@ int main(int argc, char** argv) {
         outbuf_raw.push(boost::iostreams::gzip_compressor());
         outbuf_raw.push(*output_file_raw);
         out_raw = new ostream(&outbuf_raw);
+
+        output_file_raw_meta = new ofstream(vm["output_raw_file"].as<string>() + ".meta", ios_base::out);        
     }
 
     bool use_cache = vm["use_cache"].as<bool>();
@@ -187,6 +190,7 @@ int main(int argc, char** argv) {
             vm["only_forward"].as<bool>(),
             vm["only_backward"].as<bool>(),
             out,
+            output_file_raw_meta,
             out_raw
         );
 
@@ -287,6 +291,7 @@ int main(int argc, char** argv) {
     if (out_raw != NULL) {
         boost::iostreams::close(outbuf_raw); // Don't forget this!
         output_file_raw->close();
+        output_file_raw_meta->close();
     }
 
     fprintf(stderr, "\nCPU: %.3f sec; Peak RSS: %.3f GB\n",mp_cputime(), mp_peakrss() / 1024.0 / 1024.0 / 1024.0);	
