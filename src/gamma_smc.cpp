@@ -102,6 +102,7 @@ int main(int argc, char** argv) {
             haplotype_pairs.push_back(make_pair(i, j));
         }
     }
+    cout << boost::format("Applying to %d haplotype pairs\n") % haplotype_pairs.size() << endl;
 
 
     // Load flow field file
@@ -115,6 +116,31 @@ int main(int argc, char** argv) {
         cv_grid_def,
         flow_field_unravelled
     );
+
+    // Prepare output files
+    // TODO: Create dirs, check errors
+    ostream* out = NULL;
+    ofstream* output_file = NULL;
+    boost::iostreams::filtering_streambuf<boost::iostreams::output> outbuf;
+    if (vm["output_file"].as<string>().size() > 0) {        
+        output_file = new ofstream(vm["output_file"].as<string>(), ios_base::out | ios_base::binary);        
+        outbuf.push(boost::iostreams::gzip_compressor());
+        outbuf.push(*output_file);
+        out = new ostream(&outbuf);
+    }
+
+    ostream* out_raw = NULL;
+    ofstream* output_file_raw = NULL;
+    boost::iostreams::filtering_streambuf<boost::iostreams::output> outbuf_raw;
+    if (vm["output_raw_file"].as<string>().size() > 0) {
+        // std::ofstream out;
+        // out.open(vm["output_raw_file"].as<string>(), std::ios::out | std::ios::binary);
+
+        output_file_raw = new ofstream(vm["output_raw_file"].as<string>(), ios_base::out | ios_base::binary);        
+        outbuf_raw.push(boost::iostreams::gzip_compressor());
+        outbuf_raw.push(*output_file_raw);
+        out_raw = new ostream(&outbuf_raw);
+    }
 
     bool use_cache = vm["use_cache"].as<bool>();
     if (use_cache) {
@@ -159,7 +185,9 @@ int main(int argc, char** argv) {
             vm["stride"].as<int>(),
             vm["output_at_hets"].as<bool>(),
             vm["only_forward"].as<bool>(),
-            vm["only_backward"].as<bool>()
+            vm["only_backward"].as<bool>(),
+            out,
+            out_raw
         );
 
         // Run
@@ -176,28 +204,6 @@ int main(int argc, char** argv) {
         ms_float = t2 - t1;
         cout << boost::format("calculate_posteriors() TOTAL (%f sec)") % (ms_float.count()/1000.0) << endl;
 
-        if (vm["output_file"].as<string>().size() > 0) {
-            t1 = std::chrono::high_resolution_clock::now(); 
-
-            ofstream output_file(vm["output_file"].as<string>(), ios_base::out | ios_base::binary);
-            boost::iostreams::filtering_streambuf<boost::iostreams::output> outbuf;
-            outbuf.push(boost::iostreams::gzip_compressor());
-            outbuf.push(output_file);
-            ostream out(&outbuf);
-
-            
-            // TODO: Create dirs, check errors
-
-            PPC.output(out);
-
-            
-            boost::iostreams::close(outbuf); // Don't forget this!
-            output_file.close();
-
-            t2 = std::chrono::high_resolution_clock::now();
-            ms_float = t2 - t1;
-            cout << boost::format("output() TOTAL (%f sec)") % (ms_float.count()/1000.0) << endl;
-        }
 
         if (vm["output_samples_file"].as<string>().size() > 0) {
             ofstream output_file(vm["output_samples_file"].as<string>(), ios_base::out | ios_base::binary);
@@ -206,31 +212,7 @@ int main(int argc, char** argv) {
             }
             output_file.close();
         }
-
-        if (vm["output_raw_file"].as<string>().size() > 0) {
-            t1 = std::chrono::high_resolution_clock::now(); 
-
-            // std::ofstream out;
-            // out.open(vm["output_raw_file"].as<string>(), std::ios::out | std::ios::binary);
-
-            ofstream output_file(vm["output_raw_file"].as<string>(), ios_base::out | ios_base::binary);
-            boost::iostreams::filtering_streambuf<boost::iostreams::output> outbuf;
-            outbuf.push(boost::iostreams::gzip_compressor());
-            outbuf.push(output_file);
-            ostream out(&outbuf);
-
-            PPC.output_raw(out);
-
-            boost::iostreams::close(outbuf); // Don't forget this!
-            output_file.close();
-
-            // out.close();
-
-            t2 = std::chrono::high_resolution_clock::now();
-            ms_float = t2 - t1;
-            cout << boost::format("output_raw() TOTAL (%f sec)") % (ms_float.count()/1000.0) << endl;
-        }
-
+     
         if (vm["output_n_called_file"].as<string>().size() > 0) {
             std::ofstream out;
             out.open(vm["output_n_called_file"].as<string>(), std::ios::out);
@@ -295,6 +277,17 @@ int main(int argc, char** argv) {
 
     }
 */
+
+    // Close output files
+    if (out != NULL) {
+        boost::iostreams::close(outbuf); // Don't forget this!
+        output_file->close();
+    }
+
+    if (out_raw != NULL) {
+        boost::iostreams::close(outbuf_raw); // Don't forget this!
+        output_file_raw->close();
+    }
 
     fprintf(stderr, "\nCPU: %.3f sec; Peak RSS: %.3f GB\n",mp_cputime(), mp_peakrss() / 1024.0 / 1024.0 / 1024.0);	
 
