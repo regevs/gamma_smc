@@ -448,6 +448,20 @@ class CachedPairwiseGammaSMC {
         }
         output_file << "\n";*/
 
+        *_output_file << "# sample_names = {";
+        uint i = 0;
+        for (auto& sample_name : _data_processor._sample_names) {
+            (*_output_file) << (boost::format("%d: \"%s.0\", %d: \"%s.1\"%s") 
+                % (i*2) 
+                % sample_name 
+                % (i*2+1)
+                % sample_name
+                % ((i == _data_processor._sample_names.size() - 1) ? "" : ", ")
+            );   
+            i++;
+        }
+        *_output_file << "}\n";
+
         *_output_file << "pair";
         for (uint i = 0; i < _seq_length; i++) {
             *_output_file << "\t" << _output_positions[i];  
@@ -500,7 +514,21 @@ class CachedPairwiseGammaSMC {
         (*_output_file_raw_header) << boost::format("\t\"chunk_size\": %ld,\n") % _n_pairs_in_chunk;        
 
         // Write the number of pairs
-        (*_output_file_raw_header) << boost::format("\t\"num_pairs\": %ld,\n") % _n_pairs;        
+        (*_output_file_raw_header) << boost::format("\t\"num_pairs\": %ld,\n") % _n_pairs;
+
+        (*_output_file_raw_header) << "\t\"sample_names\" = {";
+        uint i = 0;
+        for (auto& sample_name : _data_processor._sample_names) {
+            (*_output_file_raw_header) << (boost::format("%d: \"%s.0\", %d: \"%s.1\"%s") 
+                % (i*2) 
+                % sample_name 
+                % (i*2+1)
+                % sample_name
+                % (i == _data_processor._sample_names.size() - 1 ? "" : ", ")
+                ); 
+            i++;
+        }
+        (*_output_file_raw_header) << "},\n";     
 
         // Write the positions
         (*_output_file_raw_header) << boost::format("\t\"output_positions\": [\n\t\t");

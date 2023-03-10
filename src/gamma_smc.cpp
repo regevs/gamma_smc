@@ -34,9 +34,9 @@ int main(int argc, char** argv) {
         ("cache_size,z", po::value<int>()->default_value(1000), "Stride width in basepairs")
         ("only_forward,y", po::value<bool>()->default_value(false), "Calculate only forward")
         ("only_backward", po::value<bool>()->default_value(false), "Calculate only backward")
-        ("output_n_called_file", po::value<string>()->default_value(""), "Filename of n of called")
+        //("output_n_called_file", po::value<string>()->default_value(""), "Filename of n of called")
         ("samples_file,S", po::value<string>()->default_value(""), "Filename of a list of subset of samples to take")
-        ("output_samples_file", po::value<string>()->default_value(""), "Filename of a list of subset of samples used in file (in order)")
+        //("output_samples_file", po::value<string>()->default_value(""), "Filename of a list of subset of samples used in file (in order)")
         ("entropy_clipping", po::value<bool>()->default_value(false), "Clip by entropy")
     ;
 
@@ -208,16 +208,8 @@ int main(int argc, char** argv) {
         ms_float = t2 - t1;
         cout << boost::format("calculate_posteriors() TOTAL (%f sec)") % (ms_float.count()/1000.0) << endl;
 
-
-        if (vm["output_samples_file"].as<string>().size() > 0) {
-            ofstream output_file(vm["output_samples_file"].as<string>(), ios_base::out | ios_base::binary);
-            for (auto& sample_name : sample_names) {
-                output_file << sample_name << endl;   
-            }
-            output_file.close();
-        }
      
-        if (vm["output_n_called_file"].as<string>().size() > 0) {
+        /*if (vm["output_n_called_file"].as<string>().size() > 0) {
             std::ofstream out;
             out.open(vm["output_n_called_file"].as<string>(), std::ios::out);
             int32_t* cur_n_called_ptr = PPC._pairwise_n_called;
@@ -230,7 +222,8 @@ int main(int argc, char** argv) {
                 out << "\n";
             }
             out.close();
-        }        
+        }   
+        */     
         
     } 
     /*else {
