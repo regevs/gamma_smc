@@ -27,6 +27,8 @@ int main(int argc, char** argv) {
         ("beds_file,b", po::value<string>(), "File of bed filenames (empty for no masks)")
         ("output_text_file", po::value<string>()->default_value(""), "Output file in text format (recommended only for small datasets!)")
         ("output_file,o", po::value<string>()->default_value(""), "Output file")
+        ("samples_file,S", po::value<string>()->default_value(""), "Filename of a list of subset of samples to take")
+        ("only_within,w", "Apply only to haplotype pairs within each diploid")
         ("stride,s", po::value<int>()->default_value(-1), "Output posterior every")
         ("output_at_hets,h", po::value<bool>()->default_value(false), "Output at hets")
         ("use_cache,c", po::value<bool>()->default_value(true), "Use cache")
@@ -34,8 +36,7 @@ int main(int argc, char** argv) {
         ("cache_size,z", po::value<int>()->default_value(1000), "Stride width in basepairs")
         ("only_forward,y", po::value<bool>()->default_value(false), "Calculate only forward")
         ("only_backward", po::value<bool>()->default_value(false), "Calculate only backward")
-        //("output_n_called_file", po::value<string>()->default_value(""), "Filename of n of called")
-        ("samples_file,S", po::value<string>()->default_value(""), "Filename of a list of subset of samples to take")
+        //("output_n_called_file", po::value<string>()->default_value(""), "Filename of n of called")        
         //("output_samples_file", po::value<string>()->default_value(""), "Filename of a list of subset of samples used in file (in order)")
         ("entropy_clipping", po::value<bool>()->default_value(false), "Clip by entropy")
     ;
@@ -94,14 +95,24 @@ int main(int argc, char** argv) {
     // }
     cout << boost::format("Loaded file, with %d sites\n") % input_sites.size() << endl;
 
+    //
     // Create a list of pairs to work on
+    //
     vector<pair<int, int>> haplotype_pairs;
     int n_haplotypes = sample_names.size() * 2;
-    for (int i = 0; i < n_haplotypes; i++) {
-        for (int j = i+1; j < n_haplotypes; j++) {
-            haplotype_pairs.push_back(make_pair(i, j));
+
+    if (vm.count("only_within")) {
+        for (uint i = 0; i < sample_names.size(); i++) {
+            haplotype_pairs.push_back(make_pair(2*i, 2*i+1));
+        }
+    } else {
+        for (int i = 0; i < n_haplotypes; i++) {
+            for (int j = i+1; j < n_haplotypes; j++) {
+                haplotype_pairs.push_back(make_pair(i, j));
+            }
         }
     }
+
     cout << boost::format("Applying to %d haplotype pairs\n") % haplotype_pairs.size() << endl;
 
 
@@ -122,8 +133,8 @@ int main(int argc, char** argv) {
     ostream* out = NULL;
     ofstream* output_file = NULL;
     boost::iostreams::filtering_streambuf<boost::iostreams::output> outbuf;
-    if (vm["output_file"].as<string>().size() > 0) {        
-        output_file = new ofstream(vm["output_file"].as<string>(), ios_base::out | ios_base::binary);        
+    if (vm["output_text_file"].as<string>().size() > 0) {        
+        output_file = new ofstream(vm["output_text_file"].as<string>(), ios_base::out | ios_base::binary);        
         outbuf.push(boost::iostreams::gzip_compressor());
         outbuf.push(*output_file);
         out = new ostream(&outbuf);
@@ -133,16 +144,16 @@ int main(int argc, char** argv) {
     ofstream* output_file_raw_meta = NULL;
     ofstream* output_file_raw = NULL;
     boost::iostreams::filtering_streambuf<boost::iostreams::output> outbuf_raw;
-    if (vm["output_raw_file"].as<string>().size() > 0) {
+    if (vm["output_file"].as<string>().size() > 0) {
         // std::ofstream out;
         // out.open(vm["output_raw_file"].as<string>(), std::ios::out | std::ios::binary);
 
-        output_file_raw = new ofstream(vm["output_raw_file"].as<string>(), ios_base::out | ios_base::binary);        
+        output_file_raw = new ofstream(vm["output_file"].as<string>(), ios_base::out | ios_base::binary);        
         outbuf_raw.push(boost::iostreams::gzip_compressor());
         outbuf_raw.push(*output_file_raw);
         out_raw = new ostream(&outbuf_raw);
 
-        output_file_raw_meta = new ofstream(vm["output_raw_file"].as<string>() + ".meta", ios_base::out);        
+        output_file_raw_meta = new ofstream(vm["output_file"].as<string>() + ".meta", ios_base::out);        
     }
 
     bool use_cache = vm["use_cache"].as<bool>();

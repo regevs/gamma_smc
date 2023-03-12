@@ -25,11 +25,11 @@ git clone https://github.com/regevs/gamma_smc
 cd gamma_smc && make
 ```
 
-# Usage
+# Minimal Usage
 
 A minimal command line is:
 <pre>
-gamma_smc 
+bin/gamma_smc 
     -m <i>scaled_mutation_rate</i> 
     -r <i>scaled_recombination_rate</i>
     -f <i>flow_field_file</i>
@@ -39,17 +39,32 @@ gamma_smc
 
 There are more options. Below we discuss each in detail.
 
+# Full Usage
 ## Input
-```
---input_file, -i
-```
+<pre>
+--input_file, -i <i>input_file.vcf</i>
+</pre>
 The input file is in a `vcf` format.
 
+### Specifying a subset of samples
+If no option is specified, all the samples in the input file will be used.
+<pre>
+--samples_file, -S <i>samples_filename.txt</i>
+</pre>
+If given, this is the path to a file containing a subset of sample names. This is a text file with a single sample name per line. Only these will be used.
+
+## Pairs
+If no option is given, posteriors will be inferred for all haplotype pairs across all selected samples. 
+```
+--only_within, -w
+```
+If specified, only haplotype pairs within each sample will be used, but not across samples.
+
 ## Output
-```
---output_file, -o
-```
-The output file is a binary, `gzip` compressed array of the alphas and betas inferred by the algorithm. It is accompanied by a file with metadata to parse it, with the same name and additional suffix `.meta` (json format).
+<pre>
+--output_file, -o <i>posteriors.gz</i>
+</pre>
+The output file is a binary, `gzip` compressed array of the alphas and betas inferred by the algorithm. It is accompanied by a file with metadata to parse it (json format), with the same name and additional suffix `.meta` (e.g., `posteriors.gz.meta`).
 
 The function `open_posteriors` in `src/reader.py` is used to parse the binary file using the metadata, and return a pandas dataframe.
 
