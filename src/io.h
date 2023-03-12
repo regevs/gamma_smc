@@ -245,10 +245,15 @@ void readVcf(
     string filename, 
     vector<unique_ptr<SegregatingSite>>& ret,
     vector<string>& samples_in_order,
-    string samples_filename
+    string samples_filename,
+    vector<int>& samples_indices,
+    string samples_filename_against,
+    vector<int>& samples_against_indices
     ) {
     vector<string> samples_names;
+
     vector<string> required_samples;
+    vector<string> samples_names_against;
     
     // Read samples list, if available
     if (samples_filename.size() > 0) {
@@ -258,6 +263,18 @@ void readVcf(
         while (getline(indata, line)) {
             boost::algorithm::trim(line);
             required_samples.push_back(line);
+        }            
+    }
+
+    // Read second samples list, if available
+    if (samples_filename_against.size() > 0) {
+        ifstream indata;
+        indata.open(samples_filename_against);        
+        string line;
+        while (getline(indata, line)) {
+            boost::algorithm::trim(line);
+            required_samples.push_back(line);
+            samples_names_against.push_back(line);
         }            
     }
     int n_samples_required = required_samples.size();
@@ -276,6 +293,7 @@ void readVcf(
     int n_samples = bcf_hdr_nsamples(header);
     cout << boost::format("Reading %d samples in vcf...\n") % n_samples;
 
+    int n_relevant_sample = 0;
     vector<bool> sample_is_required;
     for (int i = 0; i < n_samples; i++) {
         samples_names.push_back(header->samples[i]);
@@ -288,6 +306,13 @@ void readVcf(
         }
         if (sample_is_required.back()) {
             samples_in_order.push_back(header->samples[i]);
+
+            if (std::find(samples_names_against.begin(), samples_names_against.end(), header->samples[i]) != samples_names_against.end()) {
+                samples_against_indices.push_back(n_relevant_sample);
+            } else {
+                samples_indices.push_back(n_relevant_sample);
+            }
+            n_relevant_sample++;
         }
     }
     if (n_samples_required == 0) {

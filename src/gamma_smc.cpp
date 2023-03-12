@@ -28,6 +28,7 @@ int main(int argc, char** argv) {
         ("output_text_file", po::value<string>()->default_value(""), "Output file in text format (recommended only for small datasets!)")
         ("output_file,o", po::value<string>()->default_value(""), "Output file")
         ("samples_file,S", po::value<string>()->default_value(""), "Filename of a list of subset of samples to take")
+        ("samples_file_against,T", po::value<string>()->default_value(""), "Filename of a second list of subset of samples to take, to infer against first list")
         ("only_within,w", "Apply only to haplotype pairs within each diploid")
         ("stride,s", po::value<int>()->default_value(-1), "Output posterior every")
         ("output_at_hets,h", po::value<bool>()->default_value(false), "Output at hets")
@@ -52,14 +53,39 @@ int main(int argc, char** argv) {
     
 
     // TODO: Validate flags thoroughly
+    if (vm.count("only_within") && vm.count("samples_file_against")) {
+        cout << "Error: --only_within and --samples_file_against are mutually exclusive." << endl;
+        exit(-1);
+    }
+    if (vm.count("samples_file_against") && vm.count("samples_file")) {
+        cout << "Error: --samples_file_against requires --samples_file." << endl;
+        exit(-1);
+    }
 
     // Load input file
     //vector<SegSite_t> input_sites;
     vector<unique_ptr<SegregatingSite>> input_sites;  // TODO: Have another go at getting rid of the unique_ptr and just have vector<Seg...>
     vector<string> sample_names;    
+    vector<int> samples_indices;
+    vector<int> samples_against_indices;
 
     // readSegSitesAll(vm["input_file"].as<string>(), input_sites);
-    readVcf(vm["input_file"].as<string>(), input_sites, sample_names, vm["samples_file"].as<string>()); 
+    readVcf(
+        vm["input_file"].as<string>(), 
+        input_sites, 
+        sample_names, 
+        vm["samples_file"].as<string>(), 
+        samples_indices,
+        vm["samples_file_against"].as<string>(),
+        samples_against_indices
+    ); 
+
+    // cout << "samples_indices";
+    // for (auto& i : samples_indices) { cout << i << " "; }
+    // cout << endl;
+    // cout << "samples_against_indices";
+    // for (auto& i : samples_against_indices) { cout << i << " "; }
+    // cout << endl;
 
     unordered_map<string, vector<pair<int, int>>> mask_map;
     if (vm.count("beds_file")) {
@@ -106,9 +132,17 @@ int main(int argc, char** argv) {
             haplotype_pairs.push_back(make_pair(2*i, 2*i+1));
         }
     } else {
-        for (int i = 0; i < n_haplotypes; i++) {
-            for (int j = i+1; j < n_haplotypes; j++) {
-                haplotype_pairs.push_back(make_pair(i, j));
+        if (samples_against_indices.size()) {
+            for (int i : samples_indices) {
+                for (int j : samples_against_indices) {
+                    haplotype_pairs.push_back(make_pair(i, j));
+                }
+            }
+        } else {
+            for (int i = 0; i < n_haplotypes; i++) {
+                for (int j = i+1; j < n_haplotypes; j++) {
+                    haplotype_pairs.push_back(make_pair(i, j));
+                }
             }
         }
     }

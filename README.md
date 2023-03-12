@@ -46,19 +46,24 @@ There are more options. Below we discuss each in detail.
 </pre>
 The input file is in a `vcf` format.
 
-### Specifying a subset of samples
+## Specifying a subset of samples
 If no option is specified, all the samples in the input file will be used.
 <pre>
 --samples_file, -S <i>samples_filename.txt</i>
 </pre>
 If given, this is the path to a file containing a subset of sample names. This is a text file with a single sample name per line. Only these will be used.
 
-## Pairs
-If no option is given, posteriors will be inferred for all haplotype pairs across all selected samples. 
-```
+## Specifying a subset of haplotype pairs
+If no option is given, posteriors will be inferred for all haplotype pairs across all selected samples.
+
+<pre>
 --only_within, -w
-```
+</pre>
 If specified, only haplotype pairs within each sample will be used, but not across samples.
+<pre>
+--samples_file_against, -T <i>samples_filename_against.txt</i>
+</pre>
+An additional file of sample names, in the same format of `--samples_file`. If supplied, inference will be done only for haplotypes pairs between the first list and the second list.
 
 ## Output
 <pre>
