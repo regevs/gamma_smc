@@ -403,6 +403,21 @@ void readVcf(
     hts_close(file);
 }
 
+void readMask(
+    string filename,
+    vector<pair<int, int>>& global_mask
+) {
+    fstream bedfile(filename);
+    // TODO: check errors
+
+    string bedline;
+    while (getline(bedfile, bedline)) {
+        vector<string> bedparts;
+        boost::algorithm::split(bedparts, bedline, boost::is_any_of("\t"));
+        global_mask.push_back(make_pair(stoi(bedparts[1]), stoi(bedparts[2])));  // TODO: Check errors
+    }
+}
+
 void readMasks(
     string filename,
     unordered_map<string, vector<pair<int, int>>>& mask_map,
@@ -419,17 +434,8 @@ void readMasks(
         boost::algorithm::split(parts, line, boost::is_any_of("\t"));
 
         if ((std::find(sample_names.begin(), sample_names.end(), parts[0]) != sample_names.end())) {
-            ifstream bedfile(parts[1]);
-            // TODO: check errors
-
             mask_map.emplace(parts[0], vector<pair<int, int>>());
-
-            string bedline;
-            while (getline(bedfile, bedline)) {
-                vector<string> bedparts;
-                boost::algorithm::split(bedparts, bedline, boost::is_any_of("\t"));
-                mask_map[parts[0]].push_back(make_pair(stoi(bedparts[1]), stoi(bedparts[2])));  // TODO: Check errors
-            }
+            readMask(parts[1], mask_map[parts[0]]);
             // cout << boost::format("Mask for %s - %d segments\n") % parts[0] % mask_map[parts[0]].size();
         }
     }

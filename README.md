@@ -69,6 +69,19 @@ If specified, only haplotype pairs within each sample will be used, but not acro
 </pre>
 An additional file of sample names, in the same format of `--samples_file`. If supplied, inference will be done only for haplotypes pairs between the first list and the second list.
 
+## Masking
+Many regions of the genome are difficult to align to, may have low coverage or have other issues. It is advised to specify a mask - a list of regions where the genome calling is reliable, and on which Gamma-SMC will use the sequence as observations. If no mask is provided, then it is assumed the entire chromosome should be used.
+<pre>
+--mask_file, -a <i>mask.bed</i>
+</pre>
+Provides a global mask file that applies to all samples, e.g. a species-wide mappability map. Provided in `bed` format. This is a *positive* mask - regions specified are those who should be *included*.
+<pre>
+--masks_per_sample_file, -b <i>masks_filenames.txt</i>
+</pre>
+You may want to have a different mask per sample, for example, if samples vary significantly by their calling coverage or quality along the genome. In this case you can instead supply a tab-separated text file, each line containing first the sample name (as specified in the VCF) and second a path to a bed file of the corresponding mask.
+
+**Note**: Specifying a separate mask per sample may slow inference, since now Gamma-SMC needs to calculate the intersection of each pair of masks. In many application a single global mask will suffice.
+
 ## Output
 <pre>
 --output_file, -o <i>posteriors.gz</i>

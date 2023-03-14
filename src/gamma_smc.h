@@ -114,6 +114,10 @@ class CachedPairwiseGammaSMC {
         _posteriors_alpha = aligned_alloc_float(n_elements, true);
         _posteriors_beta = aligned_alloc_float(n_elements, true);
 
+        // Allocate _n_segments rows of _n_pairs_in_chunk each
+        _pairwise_n_called = aligned_alloc_int32(_n_segments * _n_pairs_in_chunk, true);
+        _pairwise_segment_types = aligned_alloc_int8(_n_segments * _n_pairs_in_chunk, true);
+
         // If we want backward only, then we need to set it to +1, because the backward
         // pass subtracts -1.
         if (_only_backward) {
@@ -141,31 +145,38 @@ class CachedPairwiseGammaSMC {
         free(_pairwise_n_called);
     }
 
-    void prepare_pairwise_emissions(long starting_n_pair, long num_pairs) {
-        // Allocate _n_segments rows of _n_pairs_in_chunk each
-        _pairwise_segment_types = aligned_alloc_int8(_n_segments * _n_pairs_in_chunk, false);
-        _pairwise_n_called = aligned_alloc_int32(_n_segments * _n_pairs_in_chunk, false);
-
-        // Start by figuring out the number of called positions within each segment, for each pair
-        int32_t* cur_n_called_ptr = _pairwise_n_called;
-        
-        int i, j;
-        for (int n_pair = starting_n_pair; n_pair < min(_n_pairs, starting_n_pair + num_pairs); n_pair++) {
-            tie(i, j) = _haplotype_pairs[n_pair];
-            _data_processor.intersect_masks(
-                i >> 1,         // First sample ID
-                j >> 1,         // Second sample ID
-                cur_n_called_ptr + n_pair,      // Pointer to place in big array
+    void prepare_global_n_called() {
+        // Fill all entries with the same vector
+        for (int n_pair = 0; n_pair < _n_pairs_in_chunk; n_pair++) {
+            _data_processor.intersect_global_mask(
+                _pairwise_n_called + n_pair,      // Pointer to place in big array
                 _n_pairs_in_chunk             // Stride into array
             );
         }
-        
+    }
+
+    void prepare_pairwise_n_called(long starting_n_pair, long num_pairs) {
+        // Figure out the number of called positions within each segment, for each pair
+        int i, j;
+        for (int n_pair = starting_n_pair; n_pair < min(_n_pairs, starting_n_pair + num_pairs); n_pair++) {
+            tie(i, j) = _haplotype_pairs[n_pair];
+            _data_processor.intersect_masks_at_ids(
+                i >> 1,         // First sample ID
+                j >> 1,         // Second sample ID
+                _pairwise_n_called + (n_pair - starting_n_pair),      // Pointer to place in big array
+                _n_pairs_in_chunk             // Stride into array
+            );
+        }
+    }
+
+    void prepare_pairwise_emissions(long starting_n_pair, long num_pairs) {
         // Now, for each segment, figure out the emission type. If this segments
         // ends in a segregating site, look at the alleles, and also look if it falls
         // within the mask(s). 
         // Otherwise, the emission is considered to be HOM, as every segment is 
         // actually a stretch of missing and a stretch of hom.
-        int8_t* cur_ptr;        
+        int8_t* cur_ptr;  
+        int i, j;      
         for (long n_segment = 0; n_segment < _n_segments; n_segment++) {
             cur_ptr = _pairwise_segment_types + _n_pairs_in_chunk * n_segment;
 
@@ -516,10 +527,10 @@ class CachedPairwiseGammaSMC {
         // Write the number of pairs
         (*_output_file_raw_header) << boost::format("\t\"num_pairs\": %ld,\n") % _n_pairs;
 
-        (*_output_file_raw_header) << "\t\"sample_names\" = {";
+        (*_output_file_raw_header) << "\t\"sample_names\": {";
         uint i = 0;
         for (auto& sample_name : _data_processor._sample_names) {
-            (*_output_file_raw_header) << (boost::format("%d: \"%s.0\", %d: \"%s.1\"%s") 
+            (*_output_file_raw_header) << (boost::format("\"%d\": \"%s.0\", \"%d\": \"%s.1\"%s") 
                 % (i*2) 
                 % sample_name 
                 % (i*2+1)
@@ -560,7 +571,6 @@ class CachedPairwiseGammaSMC {
     }
 
     void calculate_posteriors() {
-
         if (_output_file != NULL) {
             output_header();
         }
@@ -569,10 +579,18 @@ class CachedPairwiseGammaSMC {
             output_raw_header();
         }
 
+        // If we have a global mask only, fill this once to be used for all chunks
+        if (_data_processor.is_global_mask()) {
+            prepare_global_n_called();
+        }
+
         // Go through chunks of pairs
         for (int n_pair = 0; n_pair < _n_pairs; n_pair += _n_pairs_in_chunk) {
 
             auto t1 = std::chrono::high_resolution_clock::now();
+            if (!_data_processor.is_global_mask()) {
+                prepare_pairwise_n_called(n_pair, _n_pairs_in_chunk);
+            }
             prepare_pairwise_emissions(n_pair, _n_pairs_in_chunk);            
             auto t2 = std::chrono::high_resolution_clock::now();
 

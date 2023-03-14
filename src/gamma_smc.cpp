@@ -24,7 +24,8 @@ int main(int argc, char** argv) {
         ("scaled_recombination_rate,r", po::value<float>()->default_value(0.0003), "Scaled recombination rate")
         ("flow_field_file,f", po::value<string>(), "Flow field file")
         ("input_file,i", po::value<string>(), "Input file")
-        ("beds_file,b", po::value<string>(), "File of bed filenames (empty for no masks)")
+        ("mask_file,a", po::value<string>(), "File of a global mask (empty for no mask)")
+        ("masks_per_sample_file,b", po::value<string>(), "File of masks filenames per sample (empty for no masks)")
         ("output_text_file", po::value<string>()->default_value(""), "Output file in text format (recommended only for small datasets!)")
         ("output_file,o", po::value<string>()->default_value(""), "Output file")
         ("samples_file,S", po::value<string>()->default_value(""), "Filename of a list of subset of samples to take")
@@ -57,8 +58,12 @@ int main(int argc, char** argv) {
         cout << "Error: --only_within and --samples_file_against are mutually exclusive." << endl;
         exit(-1);
     }
-    if (vm.count("samples_file_against") && vm.count("samples_file")) {
+    if (vm.count("samples_file_against") && !vm.count("samples_file")) {
         cout << "Error: --samples_file_against requires --samples_file." << endl;
+        exit(-1);
+    }
+    if (vm.count("mask_file") && vm.count("masks_per_sample_file")) {
+        cout << "Error: --mask_file and --masks_per_sample_file are mutually exclusive." << endl;
         exit(-1);
     }
 
@@ -87,16 +92,24 @@ int main(int argc, char** argv) {
     // for (auto& i : samples_against_indices) { cout << i << " "; }
     // cout << endl;
 
+    vector<pair<int, int>> global_mask;
+    if (vm.count("mask_file")) {
+        readMask(vm["mask_file"].as<string>(), global_mask);
+    } else {
+        // If no global mask is given, assume no mask
+        global_mask.push_back(make_pair(0, input_sites.back()->pos+1));
+    }
+
     unordered_map<string, vector<pair<int, int>>> mask_map;
-    if (vm.count("beds_file")) {
-        readMasks(vm["beds_file"].as<string>(), mask_map, sample_names);
+    if (vm.count("masks_per_sample_file")) {
+        readMasks(vm["masks_per_sample_file"].as<string>(), mask_map, sample_names);
         cout << boost::format("Read %d bed filenames from list...\n") % mask_map.size();    
     }
-    
 
     DataProcessor data_processor(
         input_sites,
         sample_names,
+        global_mask,
         mask_map,
         vm["stride"].as<int>(),
         vm["cache_size"].as<int>(),

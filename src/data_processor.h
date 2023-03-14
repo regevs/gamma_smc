@@ -7,11 +7,13 @@ class DataProcessor {
 
     const vector<unique_ptr<SegregatingSite>>& _sites;
     const vector<string>& _sample_names;
+    const vector<pair<int, int>>& _global_mask;
     unordered_map<string, vector<pair<int, int>>>& _mask_map;
     int _posterior_every;
     int _flow_field_cache_n_steps;
     bool _output_at_hets;
 
+    bool _is_global_mask;
     vector<position_t> _output_positions;
     vector<Segment_t> _segments;
     vector<vector<bool>> _is_seg_site_missing;
@@ -21,6 +23,7 @@ class DataProcessor {
     DataProcessor(
         const vector<unique_ptr<SegregatingSite>>& sites,
         const vector<string>& sample_names,
+        const vector<pair<int, int>>& global_mask,
         unordered_map<string, vector<pair<int, int>>>& mask_map,
         int posterior_every,
         int flow_field_cache_n_steps,
@@ -28,23 +31,20 @@ class DataProcessor {
     ) :
         _sites(sites),
         _sample_names(sample_names),
+        _global_mask(global_mask),
         _mask_map(mask_map),
         _posterior_every(posterior_every),
         _flow_field_cache_n_steps(flow_field_cache_n_steps),
-        _output_at_hets(output_at_hets)
+        _output_at_hets(output_at_hets),
+        _is_global_mask(_mask_map.size() == 0)
     {
         prepare_segments();        
-
-        // TODO: Deal more elegantly with no masks...
-        if (_mask_map.size() == 0) {
-            for (auto& sample_name : sample_names) {
-                _mask_map[sample_name] = {{0, _sites.back()->pos+1}};
-            }
-        }
-
         precalculate_seg_sites_in_masks();
     }
 
+    bool is_global_mask() {
+        return _is_global_mask;
+    }
 
     void prepare_segments() {
         position_t p;
@@ -114,11 +114,16 @@ class DataProcessor {
         for (uint n_sample = 0; n_sample < _sample_names.size(); n_sample++) {
             int count = 0;
             uint n_interval = 0;            
-            auto& mask = _mask_map[_sample_names[n_sample]];
+            const vector<pair<int, int>>* mask;
+            if (is_global_mask()) {
+                mask = &_global_mask;
+            } else {
+                mask = &(_mask_map.at(_sample_names[n_sample]));
+            };
 
             for (uint n_seg_site = 0; n_seg_site < _sites.size(); n_seg_site++) {                
-                while ((n_interval < mask.size()) && (mask[n_interval].first <= _sites[n_seg_site]->pos)) {
-                    if (mask[n_interval].second > _sites[n_seg_site]->pos) {
+                while ((n_interval < mask->size()) && ((*mask)[n_interval].first <= _sites[n_seg_site]->pos)) {
+                    if ((*mask)[n_interval].second > _sites[n_seg_site]->pos) {
                         _is_seg_site_missing[n_sample][n_seg_site] = false;
                         count++;
                         break;
@@ -131,16 +136,11 @@ class DataProcessor {
     }
 
     void intersect_masks(
-        int sample_id_1, 
-        int sample_id_2,
+        const vector<pair<int, int>>& mask1,
+        const vector<pair<int, int>>& mask2,
         int32_t* n_called_array,
         int ptr_jump = 1            // stride into n_called_array
         ) {
-        //cout << _sample_names[sample_id_1] << " vs. " << _sample_names[sample_id_2] << endl;        
-
-        auto& mask1 = _mask_map.at(_sample_names[sample_id_1]);
-        auto& mask2 = _mask_map.at(_sample_names[sample_id_2]);
-
         int i = 0, j = 0, k = 0;
         int n = mask1.size(), m = mask2.size();
 
@@ -195,6 +195,35 @@ class DataProcessor {
             k++;
         }
         
+    }
+
+    void intersect_global_mask(
+        int32_t* n_called_array,
+        int ptr_jump = 1            // stride into n_called_array
+        ) {
+        intersect_masks(
+            _global_mask, 
+            _global_mask,
+            n_called_array,
+            ptr_jump
+        );
+    }
+
+    void intersect_masks_at_ids(
+        int sample_id_1, 
+        int sample_id_2,
+        int32_t* n_called_array,
+        int ptr_jump = 1            // stride into n_called_array
+        ) {
+        auto& mask1 = _mask_map.at(_sample_names[sample_id_1]);
+        auto& mask2 = _mask_map.at(_sample_names[sample_id_2]);
+
+        intersect_masks(
+            mask1, 
+            mask2,
+            n_called_array,
+            ptr_jump
+        );
     }
 
     
