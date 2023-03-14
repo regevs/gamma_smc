@@ -20,89 +20,169 @@ int main(int argc, char** argv) {
     //
     po::options_description desc("Allowed options");
     desc.add_options()
-        ("scaled_mutation_rate,m", po::value<float>()->default_value(0.000375), "Scaled mutation rate")
-        ("scaled_recombination_rate,r", po::value<float>()->default_value(0.0003), "Scaled recombination rate")
-        ("flow_field_file,f", po::value<string>(), "Flow field file")
-        ("input_file,i", po::value<string>(), "Input file")
-        ("mask_file,a", po::value<string>(), "File of a global mask (empty for no mask)")
-        ("masks_per_sample_file,b", po::value<string>(), "File of masks filenames per sample (empty for no masks)")
-        ("output_text_file", po::value<string>()->default_value(""), "Output file in text format (recommended only for small datasets!)")
-        ("output_file,o", po::value<string>()->default_value(""), "Output file")
-        ("samples_file,S", po::value<string>()->default_value(""), "Filename of a list of subset of samples to take")
-        ("samples_file_against,T", po::value<string>()->default_value(""), "Filename of a second list of subset of samples to take, to infer against first list")
+        ("scaled_mutation_rate,m", po::value<float>()->required(), "Scaled mutation rate")
+        ("scaled_recombination_rate,r", po::value<float>()->required(), "Scaled recombination rate")
+        ("flow_field,f", po::value<string>()->default_value("resources/default_flow_field.txt")->required(), "Flow field file")
+        ("input,i", po::value<string>()->required(), "Input file")
+        ("mask,a", po::value<string>(), "File of a global mask (empty for no mask)")
+        ("masks_per_sample,b", po::value<string>(), "File of masks filenames per sample (empty for no masks)")
+        ("output_text", po::value<string>(), "Output file in text format (recommended only for small datasets!)")
+        ("output,o", po::value<string>(), "Output file")
+        ("samples,S", po::value<string>(), "Filename of a list of subset of samples to take")
+        ("samples_against,T", po::value<string>(), "Filename of a second list of subset of samples to take, to infer against first list")
         ("only_within,w", "Apply only to haplotype pairs within each diploid")
-        ("stride,s", po::value<int>()->default_value(-1), "Output posterior every")
-        ("output_at_hets,h", po::value<bool>()->default_value(false), "Output at hets")
-        ("use_cache,c", po::value<bool>()->default_value(true), "Use cache")
-        // ("log_coords,l", po::value<bool>()->default_value(true), "Use log coordinates in output?")
-        ("cache_size,z", po::value<int>()->default_value(1000), "Stride width in basepairs")
-        ("only_forward,y", po::value<bool>()->default_value(false), "Calculate only forward")
-        ("only_backward", po::value<bool>()->default_value(false), "Calculate only backward")
-        //("output_n_called_file", po::value<string>()->default_value(""), "Filename of n of called")        
-        //("output_samples_file", po::value<string>()->default_value(""), "Filename of a list of subset of samples used in file (in order)")
-        ("entropy_clipping", po::value<bool>()->default_value(false), "Clip by entropy")
+        ("output_at_stride,s", po::value<int>()->default_value(-1), "Output at positions which are multiples of this number")
+        ("output_at_hets,h", po::value<bool>()->default_value(true), "Output at segregating sites")
+        ("cache_size,z", po::value<int>()->default_value(1000), "Maximum cache size in basepairs")
+        ("only_forward,y", "Calculate only forward pass")
+        ("only_backward,d", "Calculate only backward pass")
+        ("help", "Produce help message")
     ;
 
-    po::positional_options_description p;
-    p.add("input_file", -1);
-
     po::variables_map vm;
-    po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
+    po::store(po::command_line_parser(argc, argv).options(desc).run(), vm);
 
+    // Check for help or version here, before notify
+    if (vm.count("help")) {
+        std::cout << desc << "\n";
+        exit(-1);
+    }
+    
     po::notify(vm);
 
-    
+    //
+    // Validate flags
+    //
 
-    // TODO: Validate flags thoroughly
-    if (vm.count("only_within") && vm.count("samples_file_against")) {
+    float scaled_mutation_rate = vm["scaled_mutation_rate"].as<float>();
+    if (scaled_mutation_rate < 0) {
+        cout << "Error: --scaled_mutation_rate must be positive." << endl;
+        exit(-1);
+    }
+
+    float scaled_recombination_rate = vm["scaled_recombination_rate"].as<float>();
+    if (scaled_recombination_rate < 0) {
+        cout << "Error: --scaled_recombination_rate must be positive." << endl;
+        exit(-1);
+    }
+
+    string flow_field_filename = vm["flow_field"].as<string>();
+    if (!boost::filesystem::exists(flow_field_filename)) {
+        cout << boost::format("Error: Cannot open --flow_field file: %s\n") % flow_field_filename;
+        exit(-1);
+    }
+
+    string input_filename = vm["input"].as<string>();
+    if (!boost::filesystem::exists(input_filename)) {
+        cout << boost::format("Error: Cannot open --input file: %s\n") % input_filename;
+        exit(-1);
+    }
+
+    auto output_filename = vm["output"].as<string>();
+    auto output_directory = boost::filesystem::path(output_filename).parent_path();
+    boost::filesystem::create_directories(output_directory);
+    
+    if (vm.count("only_within") && vm.count("samples_against")) {
         cout << "Error: --only_within and --samples_file_against are mutually exclusive." << endl;
         exit(-1);
     }
-    if (vm.count("samples_file_against") && !vm.count("samples_file")) {
+    if (vm.count("samples_against") && !vm.count("samples")) {
         cout << "Error: --samples_file_against requires --samples_file." << endl;
         exit(-1);
     }
-    if (vm.count("mask_file") && vm.count("masks_per_sample_file")) {
-        cout << "Error: --mask_file and --masks_per_sample_file are mutually exclusive." << endl;
+    if (vm.count("mask") && vm.count("masks_per_sample")) {
+        cout << "Error: --mask and --masks_per_sample are mutually exclusive." << endl;
         exit(-1);
     }
 
+    string mask_filename;
+    if (vm.count("mask")) {
+        mask_filename = vm["mask"].as<string>();
+        if (!boost::filesystem::exists(mask_filename)) {
+            cout << boost::format("Error: Cannot open --mask file: %s\n") % mask_filename;
+            exit(-1);
+        }
+    }
+
+    string masks_per_sample_filename;
+    if (vm.count("masks_per_filename")) {
+        masks_per_sample_filename = vm["masks_per_filename"].as<string>();
+        if (!boost::filesystem::exists(masks_per_sample_filename)) {
+            cout << boost::format("Error: Cannot open --masks_per_filename file: %s\n") % masks_per_sample_filename;
+            exit(-1);
+        }
+    }
+
+    string output_text_filename;
+    if (vm.count("output_text")) {
+        output_text_filename = vm["output_text"].as<string>();
+        auto output_text_directory = boost::filesystem::path(output_text_filename).parent_path();
+        boost::filesystem::create_directories(output_text_directory);
+    }
+
+    string samples_filename;
+    if (vm.count("samples")) {
+        samples_filename = vm["samples"].as<string>();
+        if (!boost::filesystem::exists(samples_filename)) {
+            cout << boost::format("Error: Cannot open --samples file: %s\n") % samples_filename;
+            exit(-1);
+        }
+    }
+
+    string samples_against_filename;
+    if (vm.count("samples_against")) {
+        samples_against_filename = vm["samples_against"].as<string>();
+        if (!boost::filesystem::exists(samples_against_filename)) {
+            cout << boost::format("Error: Cannot open --samples_against file: %s\n") % samples_against_filename;
+            exit(-1);
+        }
+    }
+
+    int output_at_stride = vm["output_at_stride"].as<int>();
+    bool output_at_hets = (vm.count("output_at_hets") > 0);
+    if (!output_at_hets && (output_at_stride == -1)) {
+        cout << "Warning: No output flags provided.\n";
+    }
+
+    bool only_forward = (vm.count("only_forward") > 0);
+    bool only_backward = (vm.count("only_backward") > 0);
+
+    int cache_size = vm["cache_size"].as<int>();
+    if (cache_size <= 0) {
+        cout << boost::format("Error: --cache_size must be positive.\n");
+        exit(-1);
+    }
+
+    //
     // Load input file
+    //
     //vector<SegSite_t> input_sites;
     vector<unique_ptr<SegregatingSite>> input_sites;  // TODO: Have another go at getting rid of the unique_ptr and just have vector<Seg...>
     vector<string> sample_names;    
     vector<int> samples_indices;
     vector<int> samples_against_indices;
 
-    // readSegSitesAll(vm["input_file"].as<string>(), input_sites);
     readVcf(
-        vm["input_file"].as<string>(), 
+        input_filename, 
         input_sites, 
         sample_names, 
-        vm["samples_file"].as<string>(), 
+        samples_filename, 
         samples_indices,
-        vm["samples_file_against"].as<string>(),
+        samples_against_filename,
         samples_against_indices
     ); 
 
-    // cout << "samples_indices";
-    // for (auto& i : samples_indices) { cout << i << " "; }
-    // cout << endl;
-    // cout << "samples_against_indices";
-    // for (auto& i : samples_against_indices) { cout << i << " "; }
-    // cout << endl;
-
     vector<pair<int, int>> global_mask;
-    if (vm.count("mask_file")) {
-        readMask(vm["mask_file"].as<string>(), global_mask);
+    if (vm.count("mask")) {
+        readMask(mask_filename, global_mask);
     } else {
         // If no global mask is given, assume no mask
         global_mask.push_back(make_pair(0, input_sites.back()->pos+1));
     }
 
     unordered_map<string, vector<pair<int, int>>> mask_map;
-    if (vm.count("masks_per_sample_file")) {
-        readMasks(vm["masks_per_sample_file"].as<string>(), mask_map, sample_names);
+    if (vm.count("masks_per_sample")) {
+        readMasks(masks_per_sample_filename, mask_map, sample_names);
         cout << boost::format("Read %d bed filenames from list...\n") % mask_map.size();    
     }
 
@@ -111,9 +191,9 @@ int main(int argc, char** argv) {
         sample_names,
         global_mask,
         mask_map,
-        vm["stride"].as<int>(),
-        vm["cache_size"].as<int>(),
-        vm["output_at_hets"].as<bool>()
+        output_at_stride,
+        cache_size,
+        output_at_hets
     );
 
     cout << "Evaluating at " << data_processor._n_segments << " positions, outputting at " << data_processor._seq_length << endl;
@@ -169,7 +249,7 @@ int main(int argc, char** argv) {
     vector<float> flow_field_unravelled;
 
     read_flow_field_raw(
-        vm["flow_field_file"].as<string>(),
+        flow_field_filename,
         mean_grid_def,
         cv_grid_def,
         flow_field_unravelled
@@ -180,8 +260,8 @@ int main(int argc, char** argv) {
     ostream* out = NULL;
     ofstream* output_file = NULL;
     boost::iostreams::filtering_streambuf<boost::iostreams::output> outbuf;
-    if (vm["output_text_file"].as<string>().size() > 0) {        
-        output_file = new ofstream(vm["output_text_file"].as<string>(), ios_base::out | ios_base::binary);        
+    if (vm.count("output_text")) {        
+        output_file = new ofstream(output_text_filename, ios_base::out | ios_base::binary);        
         outbuf.push(boost::iostreams::gzip_compressor());
         outbuf.push(*output_file);
         out = new ostream(&outbuf);
@@ -191,147 +271,78 @@ int main(int argc, char** argv) {
     ofstream* output_file_raw_meta = NULL;
     ofstream* output_file_raw = NULL;
     boost::iostreams::filtering_streambuf<boost::iostreams::output> outbuf_raw;
-    if (vm["output_file"].as<string>().size() > 0) {
+    if (output_filename.size() > 0) {
         // std::ofstream out;
         // out.open(vm["output_raw_file"].as<string>(), std::ios::out | std::ios::binary);
 
-        output_file_raw = new ofstream(vm["output_file"].as<string>(), ios_base::out | ios_base::binary);        
+        output_file_raw = new ofstream(output_filename, ios_base::out | ios_base::binary);        
         outbuf_raw.push(boost::iostreams::gzip_compressor());
         outbuf_raw.push(*output_file_raw);
         out_raw = new ostream(&outbuf_raw);
 
-        output_file_raw_meta = new ofstream(vm["output_file"].as<string>() + ".meta", ios_base::out);        
+        output_file_raw_meta = new ofstream(output_filename + ".meta", ios_base::out);        
     }
 
-    bool use_cache = vm["use_cache"].as<bool>();
-    if (use_cache) {
-        // Construct flow field
-        unique_ptr<FlowField> FF(new FlowField(mean_grid_def, cv_grid_def, flow_field_unravelled));
+    // Construct flow field
+    unique_ptr<FlowField> FF(new FlowField(mean_grid_def, cv_grid_def, flow_field_unravelled));
 
-        // Construct flow field cache
-        cout << "Building flow field cache..." << endl;
+    // Construct flow field cache
+    cout << "Building flow field cache..." << endl;
 
-        auto t1 = std::chrono::high_resolution_clock::now();
-        
-        unique_ptr<FlowFieldCache> FFC(new FlowFieldCache(
-            vm["scaled_recombination_rate"].as<float>(),
-            vm["scaled_mutation_rate"].as<float>(),
-            move(FF),
-            vm["cache_size"].as<int>(),
-            vm["entropy_clipping"].as<bool>()
-        ));
+    auto t1 = std::chrono::high_resolution_clock::now();
+    
+    unique_ptr<FlowFieldCache> FFC(new FlowFieldCache(
+        scaled_recombination_rate,
+        scaled_mutation_rate,
+        move(FF),
+        cache_size,
+        true                // entropy clipping
+    ));
 
-        auto t2 = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<float, std::milli> ms_float = t2 - t1;
+    auto t2 = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<float, std::milli> ms_float = t2 - t1;
 
-        cout << boost::format("Done (%f sec)") % (ms_float.count()/1000) << endl;
+    cout << boost::format("Done (%f sec)") % (ms_float.count()/1000) << endl;
 
-        // ofstream missing_cache;
-        // missing_cache.open("/home/rs2145/temp/cache.missing.bin", std::ofstream::binary);
-        // missing_cache.write((char*)&(FFC->_cached_missing_unravelled[0]), FFC->_cached_missing_unravelled.size() * sizeof(float));
-        // missing_cache.close();
+    // ofstream missing_cache;
+    // missing_cache.open("/home/rs2145/temp/cache.missing.bin", std::ofstream::binary);
+    // missing_cache.write((char*)&(FFC->_cached_missing_unravelled[0]), FFC->_cached_missing_unravelled.size() * sizeof(float));
+    // missing_cache.close();
 
-        // ofstream hom_cache;
-        // hom_cache.open("/home/rs2145/temp/cache.hom.bin", std::ofstream::binary);
-        // hom_cache.write((char*)&(FFC->_cached_hom_unravelled[0]), FFC->_cached_hom_unravelled.size() * sizeof(float));
-        // hom_cache.close();
+    // ofstream hom_cache;
+    // hom_cache.open("/home/rs2145/temp/cache.hom.bin", std::ofstream::binary);
+    // hom_cache.write((char*)&(FFC->_cached_hom_unravelled[0]), FFC->_cached_hom_unravelled.size() * sizeof(float));
+    // hom_cache.close();
 
-        CachedPairwiseGammaSMC PPC(
-            input_sites,
-            haplotype_pairs,
-            vm["scaled_recombination_rate"].as<float>(),
-            vm["scaled_mutation_rate"].as<float>(),
-            move(FFC),
-            data_processor,
-            vm["stride"].as<int>(),
-            vm["output_at_hets"].as<bool>(),
-            vm["only_forward"].as<bool>(),
-            vm["only_backward"].as<bool>(),
-            out,
-            output_file_raw_meta,
-            out_raw
-        );
+    CachedPairwiseGammaSMC PPC(
+        input_sites,
+        haplotype_pairs,
+        scaled_recombination_rate,
+        scaled_mutation_rate,
+        move(FFC),
+        data_processor,
+        output_at_stride,
+        output_at_hets,
+        only_forward,
+        only_backward,
+        out,
+        output_file_raw_meta,
+        out_raw
+    );
 
-        // Run
-        cout << "Running..." << endl;
+    // Run
+    cout << "Running..." << endl;
 
 
-        t1 = std::chrono::high_resolution_clock::now();  
+    t1 = std::chrono::high_resolution_clock::now();  
 
-        // __itt_frame_begin_v3(pD, NULL);     
-        PPC.calculate_posteriors();
-        // __itt_frame_end_v3(pD, NULL);
+    // __itt_frame_begin_v3(pD, NULL);     
+    PPC.calculate_posteriors();
+    // __itt_frame_end_v3(pD, NULL);
 
-        t2 = std::chrono::high_resolution_clock::now();
-        ms_float = t2 - t1;
-        cout << boost::format("calculate_posteriors() TOTAL (%f sec)") % (ms_float.count()/1000.0) << endl;
-
-     
-        /*if (vm["output_n_called_file"].as<string>().size() > 0) {
-            std::ofstream out;
-            out.open(vm["output_n_called_file"].as<string>(), std::ios::out);
-            int32_t* cur_n_called_ptr = PPC._pairwise_n_called;
-            for (int n_segment = 0; n_segment < PPC._n_segments; n_segment++) {
-                out << PPC._segments[n_segment].pos;
-                for (int i = 0; i < PPC._n_pairs_rounded_up; i++) {
-                    out << "\t" << *cur_n_called_ptr;
-                    cur_n_called_ptr++;
-                }
-                out << "\n";
-            }
-            out.close();
-        }   
-        */     
-        
-    } 
-    /*else {
-        // Construct flow field
-        unique_ptr<FlowField> FF(new FlowField(mean_grid_def, cv_grid_def, flow_field_unravelled));
-        
-        // Construct main object
-        PairwiseGammaSMC PP(
-            input_sites,
-            vm["scaled_recombination_rate"].as<float>(),
-            vm["scaled_mutation_rate"].as<float>(),
-            move(FF),
-            vm["log_coords"].as<bool>()
-        );   
-
-        
-
-        // Run
-        cout << "Running..." << endl;
-
-        auto t1 = std::chrono::high_resolution_clock::now();
-        PP.calculate_posteriors();
-        
-        auto t2 = std::chrono::high_resolution_clock::now();
-        auto ms_float = t2 - t1;
-
-        cout << boost::format("Done (%f sec)") % (ms_float.count()/1000.0) << endl;
-
-        // Print
-        if (vm["output_file"].as<string>().size() > 0) {
-            ofstream output_file;
-            output_file.open(vm["output_file"].as<string>());
-            for (uint i = 0; i < PP._posteriors_alpha.size(); i++) {
-                if (i % vm["stride"].as<int>() == 0) {
-                    output_file << boost::format("%d\t%32.20f\t%32.20f\t%32.20f\t%32.20f\t%32.20f\t%32.20f\n")
-                        % i  
-                        % PP._scaled_forwards_alpha[i] % PP._scaled_forwards_beta[i] 
-                        % PP._rev_scaled_forwards_alpha[i] % PP._rev_scaled_forwards_beta[i] 
-                        % PP._posteriors_alpha[i] % PP._posteriors_beta[i]; 
-                    // output_file << i << "\t" << PP._scaled_forwards_alpha[i] << "\t" << PP._scaled_forwards_beta[i] 
-                    // << "\t" << PP._rev_scaled_forwards_alpha[i] << "\t" << PP._rev_scaled_forwards_beta[i] 
-                    // << "\t" << PP._posteriors_alpha[i] << "\t" << PP._posteriors_beta[i] << endl; 
-                }
-            }    
-
-            output_file.close();
-        }
-
-    }
-*/
+    t2 = std::chrono::high_resolution_clock::now();
+    ms_float = t2 - t1;
+    cout << boost::format("calculate_posteriors() TOTAL (%f sec)") % (ms_float.count()/1000.0) << endl;
 
     // Close output files
     if (out != NULL) {
