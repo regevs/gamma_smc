@@ -7,8 +7,9 @@
 #include "data_processor.h"
 
 int main(int argc, char** argv) {
-
+    //
     // Print command line
+    //
     cout << "Command line:" << endl;
     for (int i = 0; i < argc; ++i) {
         cout << argv[i] << ' ';
@@ -42,7 +43,7 @@ int main(int argc, char** argv) {
     po::variables_map vm;
     po::store(po::command_line_parser(argc, argv).options(desc).run(), vm);
 
-    // Check for help or version here, before notify
+    // Check for --help or --version here, before notify
     if (vm.count("help")) {
         std::cout << desc << "\n";
         exit(-1);
@@ -53,7 +54,6 @@ int main(int argc, char** argv) {
     //
     // Validate flags
     //
-
     float scaled_mutation_rate = vm["scaled_mutation_rate"].as<float>();
     if (scaled_mutation_rate < 0) {
         cout << "Error: --scaled_mutation_rate must be positive." << endl;
@@ -156,7 +156,6 @@ int main(int argc, char** argv) {
     //
     // Load input file
     //
-    //vector<SegSite_t> input_sites;
     vector<unique_ptr<SegregatingSite>> input_sites;  // TODO: Have another go at getting rid of the unique_ptr and just have vector<Seg...>
     vector<string> sample_names;    
     vector<int> samples_indices;
@@ -172,6 +171,9 @@ int main(int argc, char** argv) {
         samples_against_indices
     ); 
 
+    //
+    // Load masks
+    //
     vector<pair<int, int>> global_mask;
     if (vm.count("mask")) {
         readMask(mask_filename, global_mask);
@@ -186,6 +188,9 @@ int main(int argc, char** argv) {
         cout << boost::format("Read %d bed filenames from list...\n") % mask_map.size();    
     }
 
+    //
+    // Process segments
+    //
     DataProcessor data_processor(
         input_sites,
         sample_names,
@@ -197,21 +202,6 @@ int main(int argc, char** argv) {
     );
 
     cout << "Evaluating at " << data_processor._n_segments << " positions, outputting at " << data_processor._seq_length << endl;
-
-    // vector<int> n_called_array(data_processor._n_segments);
-    // data_processor.intersect_masks(0, 1, n_called_array.data());
-
-    // exit(-1);
-
-
-    // TODO: Print time benchmarks, print some stats
-
-    // int bb = 0;
-    // for (const auto& stuff: input_sites) {
-    //     cout << stuff.pos << " - " << stuff.type << endl;
-    //     bb ++;
-    //     if (bb > 10) { break; }
-    // }
     cout << boost::format("Loaded file, with %d sites\n") % input_sites.size() << endl;
 
     //
@@ -242,8 +232,9 @@ int main(int argc, char** argv) {
 
     cout << boost::format("Applying to %d haplotype pairs\n") % haplotype_pairs.size() << endl;
 
-
+    //
     // Load flow field file
+    //
     vector<float> mean_grid_def;
     vector<float> cv_grid_def;
     vector<float> flow_field_unravelled;
@@ -255,8 +246,10 @@ int main(int argc, char** argv) {
         flow_field_unravelled
     );
 
+    //
     // Prepare output files
-    // TODO: Create dirs, check errors
+    //
+    // TODO: Check errors
     ostream* out = NULL;
     ofstream* output_file = NULL;
     boost::iostreams::filtering_streambuf<boost::iostreams::output> outbuf;
@@ -272,9 +265,6 @@ int main(int argc, char** argv) {
     ofstream* output_file_raw = NULL;
     boost::iostreams::filtering_streambuf<boost::iostreams::output> outbuf_raw;
     if (output_filename.size() > 0) {
-        // std::ofstream out;
-        // out.open(vm["output_raw_file"].as<string>(), std::ios::out | std::ios::binary);
-
         output_file_raw = new ofstream(output_filename, ios_base::out | ios_base::binary);        
         outbuf_raw.push(boost::iostreams::gzip_compressor());
         outbuf_raw.push(*output_file_raw);
@@ -283,10 +273,14 @@ int main(int argc, char** argv) {
         output_file_raw_meta = new ofstream(output_filename + ".meta", ios_base::out);        
     }
 
+    //
     // Construct flow field
+    //
     unique_ptr<FlowField> FF(new FlowField(mean_grid_def, cv_grid_def, flow_field_unravelled));
 
+    //
     // Construct flow field cache
+    //
     cout << "Building flow field cache..." << endl;
 
     auto t1 = std::chrono::high_resolution_clock::now();
@@ -304,16 +298,9 @@ int main(int argc, char** argv) {
 
     cout << boost::format("Done (%f sec)") % (ms_float.count()/1000) << endl;
 
-    // ofstream missing_cache;
-    // missing_cache.open("/home/rs2145/temp/cache.missing.bin", std::ofstream::binary);
-    // missing_cache.write((char*)&(FFC->_cached_missing_unravelled[0]), FFC->_cached_missing_unravelled.size() * sizeof(float));
-    // missing_cache.close();
-
-    // ofstream hom_cache;
-    // hom_cache.open("/home/rs2145/temp/cache.hom.bin", std::ofstream::binary);
-    // hom_cache.write((char*)&(FFC->_cached_hom_unravelled[0]), FFC->_cached_hom_unravelled.size() * sizeof(float));
-    // hom_cache.close();
-
+    //
+    // Run
+    //
     CachedPairwiseGammaSMC PPC(
         input_sites,
         haplotype_pairs,
@@ -330,21 +317,18 @@ int main(int argc, char** argv) {
         out_raw
     );
 
-    // Run
     cout << "Running..." << endl;
 
 
     t1 = std::chrono::high_resolution_clock::now();  
-
-    // __itt_frame_begin_v3(pD, NULL);     
     PPC.calculate_posteriors();
-    // __itt_frame_end_v3(pD, NULL);
-
     t2 = std::chrono::high_resolution_clock::now();
     ms_float = t2 - t1;
     cout << boost::format("calculate_posteriors() TOTAL (%f sec)") % (ms_float.count()/1000.0) << endl;
 
+    //
     // Close output files
+    //
     if (out != NULL) {
         boost::iostreams::close(outbuf); // Don't forget this!
         output_file->close();
