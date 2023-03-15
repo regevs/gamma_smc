@@ -33,7 +33,7 @@ cd gamma_smc && make bin/gamma_smc
 
 A minimal command line is:
 <pre>
-bin/gamma_smc 
+$ bin/gamma_smc 
     -m <i>scaled_mutation_rate</i> 
     -r <i>scaled_recombination_rate</i>
     -i <i>input_file.vcf</i>
@@ -79,48 +79,48 @@ Provides a global mask file that applies to all samples, e.g. a species-wide map
 </pre>
 You may want to have a different mask per sample, for example, if samples vary significantly by their calling coverage or quality along the genome. In this case you can instead supply a tab-separated text file, each line containing first the sample name (as specified in the VCF) and second a path to a bed file of the corresponding mask.
 
-**Note**: Specifying a separate mask per sample may slow inference, since now Gamma-SMC needs to calculate the intersection of each pair of masks. In many application a single global mask will suffice.
+**Note**: Specifying a separate mask per sample may slow down inference, since now Gamma-SMC needs to calculate the intersection of each pair of masks. In many applications, a single global mask will suffice.
 
 ## Mutation rate
 <pre>
---scaled_mutation_rate, -m <i>u</i>
+--scaled_mutation_rate, -m <i>theta</i>
 </pre>
-Gamma-SMC requires the scaled mutation rate, defined as $u = 4\cdot N_e \cdot \mu$, where:
+Gamma-SMC requires the scaled mutation rate, defined as $\theta = 4\cdot N_e \cdot \mu$, where:
 - $\mu$ is the (unscaled) mutation rate, in units of mutations per generation per base-pair
-- $N_e$ is the effective population size, given as the number of haploids
+- $N_e$ is the effective population size, given as a number of haploids
 
-Gamma-SMC is fairly robust to mis-specification of this argument, but it should be in the same ballpark as the true value. For humans (esp. of European ancestry), $u = 0.000375$ is a good estimate. You can also estimate this using Watterson's estimator.
+Gamma-SMC is fairly robust to mis-specification of this argument, but it should be in the same ballpark as the true value. For humans (esp. of European ancestry), $\theta = 0.000375$ is a good estimate. You can also estimate this using Watterson's estimator.
 
 ## Recombination rate
 <pre>
---scaled_recombination_rate, -r <i>r</i>
+--scaled_recombination_rate, -r <i>rho</i>
 </pre>
-Gamma-SMC also requires the scaled recombination rate, defined as $r = 4\cdot N_e \cdot \rho$, where:
-- $\rho$ is the (unscaled) recombination rate, in units of recombinations per generation per base-pair
-- $N_e$ is the effective population size, given as the number of haploids
+Gamma-SMC also requires the scaled recombination rate, defined as $\rho = 4\cdot N_e \cdot r$, where:
+- $r$ is the (unscaled) recombination rate, in units of recombinations per generation per base-pair
+- $N_e$ is the effective population size, given as a number of haploids
 
-Gamma-SMC is also robust to mis-specification of this argument, but it should be in the same ballpark as the true value. For humans (esp. of European ancestry), $r = 0.0003$ is a good estimate. 
+Gamma-SMC is also robust to mis-specification of this argument, but it should be in the same ballpark as the true value. For humans (esp. of European ancestry), $\rho = 0.0003$ is a good estimate. 
 
-If you have an estimate of $\mu, \rho$ and an estimate of $u$ (perhaps from the data), you can extract an estimate of $N_e$ from it and get an estimate for $r$.
+If you have an estimate of $\mu, r$ and also an estimate of $\theta$ (perhaps from the data), you can extract get an estimate for $\rho = \theta/\mu\cdot r$.
 
 ## Flow field
 <pre>
 --flow_field, -f <i>flow_field.txt</i>
 </pre>
-A path to the flow field specification. Gamma-SMC requires a flow field as input to work. We supply a default at `resources/default_flow_field.txt` which should be reasonable for most use cases. If you just want to use the default flow field, you can omit this flag which should default to the correct filename. If you want to generate a new one, you may use
+A path to the flow field specification. Gamma-SMC requires a flow field as input to work. We supply a default at `resources/default_flow_field.txt` which should be reasonable for most use cases. If you want to generate a new one, you may compile with
 ```
-make bin/generate_canonical_flow_field
+$ make bin/generate_canonical_flow_field
 ```
 and run:
 ```
-bin/generate_canonical_flow_field ...
+$ bin/generate_canonical_flow_field ...
 ```
 
 ## Cache size
 <pre>
 --cache_size, -z <i>cache_size</i>
 </pre>
-Gamma-SMC caches operating on stretches of homozygosity for fast inference. Larger cache may result in faster running times but slower startup and somewhat larger memory footprint. Note that there is little advantage in increasing cache size above the typical distance between segregating sites in your sample. Defaults to 1000.
+Gamma-SMC caches operating on stretches of homozygosity or missingness for fast inference. Larger cache may result in faster running times, but in slower startup time and somewhat larger memory footprint. Note that there is little advantage in increasing cache size above the typical distance between segregating sites in your sample. Defaults to 1000.
 
 ## Output
 <pre>
