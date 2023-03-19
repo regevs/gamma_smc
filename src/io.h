@@ -290,12 +290,15 @@ void readVcf(
     auto file = hts_open(filename.c_str(), "r");
     auto header = bcf_hdr_read(file);
 
-    string list_of_samples = boost::algorithm::join(required_samples, ",");
-    int bcf_hdr_set_samples_error = bcf_hdr_set_samples(header, list_of_samples.c_str(), 0);
-    if (bcf_hdr_set_samples_error) {
-        cout << boost::format("Error: bcf_hdr_set_samples failed; possibly a required sample ID doesn't exist in VCF.\n");
-        exit(-1);
+    if (required_samples.size() > 0) {
+        string list_of_samples = boost::algorithm::join(required_samples, ",");
+        int bcf_hdr_set_samples_error = bcf_hdr_set_samples(header, list_of_samples.c_str(), 0);
+        if (bcf_hdr_set_samples_error) {
+            cout << boost::format("Error: bcf_hdr_set_samples failed; possibly a required sample ID doesn't exist in VCF.\n");
+            exit(-1);
+        }
     }
+
     auto record = bcf_init();
 
     int n_samples = bcf_hdr_nsamples(header);
