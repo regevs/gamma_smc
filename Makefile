@@ -4,8 +4,8 @@ CXXFLAGS=	-std=c++14  -Wall -DNDEBUG -O3 -g -ffast-math -funsafe-math-optimizati
 			-mavx2 -mfma -march=native -ftree-vectorize -msse -msse2 -msse3 -pipe -faligned-new  \
 			-Wno-unused-variable -Wno-strict-aliasing 
 
-LDFLAGS=	-lboost_program_options -O3 -g -larb -lflint -lpthread -lgsl -lgslcblas -lm \
-			-lhts -lboost_iostreams
+LDFLAGS=	-O3 -g -larb -lflint -lpthread -lgsl -lgslcblas -lm \
+			-lhts -lboost_iostreams -lboost_program_options -lboost_system -lboost_filesystem
 
 .SUFFIXES:.c .cpp .o
 .PHONY:all clean
