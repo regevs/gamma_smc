@@ -23,7 +23,7 @@ def open_posteriors(filename):
     alphas = pd.DataFrame(raw_floats[0, :, :], index=meta["output_positions"], columns=column_names)
     betas = pd.DataFrame(raw_floats[1, :, :], index=meta["output_positions"], columns=column_names)
 
-    return alphas, betas
+    return alphas, betas, meta
     
 
 

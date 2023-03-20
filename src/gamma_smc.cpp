@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
     desc.add_options()
         ("scaled_mutation_rate,m", po::value<float>()->required(), "Scaled mutation rate")
         ("scaled_recombination_rate,r", po::value<float>()->required(), "Scaled recombination rate")
-        ("flow_field,f", po::value<string>()->default_value("resources/default_flow_field.txt")->required(), "Flow field file")
+        ("flow_field,f", po::value<string>(), "Flow field file")
         ("input,i", po::value<string>()->required(), "Input file")
         ("mask,a", po::value<string>(), "File of a global mask (empty for no mask)")
         ("masks_per_sample,b", po::value<string>(), "File of masks filenames per sample (empty for no masks)")
@@ -70,10 +70,13 @@ int main(int argc, char** argv) {
         exit(-1);
     }
 
-    string flow_field_filename = vm["flow_field"].as<string>();
-    if (!boost::filesystem::exists(flow_field_filename)) {
-        cout << boost::format("Error: Cannot open --flow_field file: %s\n") % flow_field_filename;
-        exit(-1);
+    string flow_field_filename;
+    if (vm.count("flow_field")) {
+        flow_field_filename = vm["flow_field"].as<string>();
+        if (!boost::filesystem::exists(flow_field_filename)) {
+            cout << boost::format("Error: Cannot open --flow_field file: %s\n") % flow_field_filename;
+            exit(-1);
+        }
     }
 
     string input_filename = vm["input"].as<string>();
@@ -261,12 +264,20 @@ int main(int argc, char** argv) {
     vector<float> cv_grid_def;
     vector<float> flow_field_unravelled;
 
-    read_flow_field_raw(
-        flow_field_filename,
-        mean_grid_def,
-        cv_grid_def,
-        flow_field_unravelled
-    );
+    if (vm.count("flow_field")) {
+        read_flow_field_raw(
+            flow_field_filename,
+            mean_grid_def,
+            cv_grid_def,
+            flow_field_unravelled
+        );
+    } else {
+        read_flow_field_default(
+            mean_grid_def,
+            cv_grid_def,
+            flow_field_unravelled
+        );
+    }
 
     //
     // Prepare output files

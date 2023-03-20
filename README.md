@@ -107,7 +107,7 @@ If you have an estimate of $\mu, r$ and also an estimate of $\theta$ (perhaps fr
 <pre>
 --flow_field, -f <i>flow_field.txt</i>
 </pre>
-A path to the flow field specification. Gamma-SMC requires a flow field as input to work. We supply a default at `resources/default_flow_field.txt` which should be reasonable for most use cases. If you want to generate a new one, you may compile with
+A path to the flow field specification. Gamma-SMC requires a flow field as input to work. If unspecified, a default one is used (hard-coded), which is also available for reference at `resources/default_flow_field.txt`. Thich should be reasonable for most use cases. If you want to generate a new one, you may compile with
 ```
 $ make bin/generate_canonical_flow_field
 ```
@@ -128,7 +128,7 @@ Gamma-SMC caches operating on stretches of homozygosity or missingness for fast 
 </pre>
 The output file is a binary, `gzip` compressed array of the alphas and betas inferred by the algorithm. It is accompanied by a file with metadata to parse it (json format), with the same name and additional suffix `.meta` (e.g., `posteriors.gz.meta`).
 
-The function `open_posteriors` in `src/reader.py` is used to parse the binary file using the metadata, and return a pandas dataframe.
+The function `open_posteriors` in `src/reader.py` is used to parse the binary file using the metadata, see below for more.
 
 Inside the `.meta` file there is a dictionary translating from the haplotype numbers used in the dataframe to sample names, e.g. `sample_names = {0: "sample_name.0", 1: "sample_name.1", 2: "another_sample_name.0", ...}` etc.
 
@@ -145,4 +145,18 @@ Output at segregating sites - these are assumed to be all the sites in your inpu
 Output every <i>jump_size</i> basepairs. Turned off by default. A good value is `-s 1000` or `-s 100`; smaller values will probably be too long to run and generate huge files.
 
 # Interpreting the output
-Expand here.
+Use `open_posteriors` from `src/reader.py` to open the output:
+```Python
+os.chdir("/path/tp/git/gamma_smc/src")
+import reader
+
+alphas, betas, meta = reader.open_posteriors("output_file.raw.gz")
+```
+`alphas` and `betas` are pandas dataframes, and `meta` is a dictionary describing the dataset. The posterior distribution of the TMRCA at the $i$-th position, for the $j$-th pair, is described by $\Gamma(\alpha_{i,j}, \beta_{i,j})$, where $\alpha_{i,j}$ can be obtained by `alphas.iloc[i,j]`, and same for $\beta_{i,j}$. From this one can obtain, e.g. the mean posterior TMRCA, by $\alpha_{i,j}/\beta_{i,j}$. Other quantities, like the MAP (mode) of the variance can similarly be obtained.
+
+In `meta`, useful properties are:
+- `output_positions` - a list of genomic positions at which TMRCA posteriors were inferred
+- `pairs` - the order of pairs for which posteriors were inferred, using serial numbers (e.g. `0_1`)
+- `sample_names` - a mapping from a serial number a the sample name
+
+
