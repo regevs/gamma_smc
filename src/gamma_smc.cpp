@@ -361,10 +361,11 @@ int main(int argc, char** argv) {
     screen.print_item(boost::str(boost::format("Forward pass time:\t\t%.3f secs") % PPC._timer_forward));
     screen.print_item(boost::str(boost::format("Backward pass time:\t\t%.3f secs") % PPC._timer_backward));
     screen.print_item(boost::str(boost::format("Output time:\t\t%.3f secs") % PPC._timer_output));
+    screen.print_done();
 
-    cout << endl;
+    screen.print_subtitle("Summary:");
 
-    // screen.print_item(boost::str(boost::format("Time per Gbp per pair\t%.3f secs") % (time_per_bp_per_pair * 1e9)));
+    screen.print_item(boost::str(boost::format("Time per Gbp per pair\t%.3f secs") % (time_per_bp_per_pair * 1e9)));
     // screen.print_item(boost::str(boost::format("Time per 1M segments per pair\t%.3f secs") % (time_per_segment_per_pair * 1e6)));
     screen.print_item(boost::str(boost::format("Overall time:\t\t%.3f secs") % mp_cputime()));
     screen.print_item(boost::str(boost::format("Peak memory:\t\t%.3f GB") % (mp_peakrss() / 1024.0 / 1024.0 / 1024.0)));	
