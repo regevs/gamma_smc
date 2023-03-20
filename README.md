@@ -10,7 +10,17 @@ Both functionality and documentation are in progress, and will be updated prior 
 
 - [Boost](https://www.boost.org/) (tested with version 1.74)
 - [htslib](https://github.com/samtools/htslib) (tested with version 1.15)
-- [pandas](https://pandas.pydata.org/) (tested with version 1.4.1)
+- [pandas](https://pandas.pydata.org/) (tested with version 1.4.1) - not strictly needed but used to parse the raw data
+
+An easy way to manage these installations is using `conda`:
+```
+conda create --name gamma_smc -y python
+conda activate gamma_smc
+conda install --name gamma_smc --channel conda-forge boost>=1.74
+conda install --name gamma_smc --channel bioconda htslib>=1.15
+conda install --name gamma_smc --channel anaconda pandas>=1.4.1
+```
+This creates a new environment, installs the requirements and adds their paths to the relevant environmental variables as required below.
 
 To generate a flow field yourself (see below), you also need:
 
@@ -21,7 +31,7 @@ To generate a flow field yourself (see below), you also need:
 
 ## Compilation
 
-Make sure that the installation paths are set, e.g. by appending `include` paths to the `CPATH` environmental variable, and `lib` paths to `LIBRARY_PATH` and `LD_LIBRARY_PATH` environmental variables.
+Make sure that the installation paths are set, e.g. by appending `include` paths to the `CPATH` environmental variable, and `lib` paths to `LIBRARY_PATH` and `LD_LIBRARY_PATH` environmental variables. 
 
 Download and compile with:
 ```
@@ -47,7 +57,7 @@ There are more options. Below we discuss each in detail.
 <pre>
 --input, -i <i>input_file.vcf</i>
 </pre>
-The input file is in a `vcf` format. It can also be a `vcf.gz` or `bcf` file. 
+The input file is in `vcf`, `vcf.gz`, `bcf` or `bcf.gz` formats. 
 
 ## Specifying a subset of samples
 If no option is specified, all the samples in the input file will be used.
@@ -147,10 +157,10 @@ Output every <i>jump_size</i> basepairs. Turned off by default. A good value is 
 # Interpreting the output
 Use `open_posteriors` from `src/reader.py` to open the output:
 ```Python
-os.chdir("/path/tp/git/gamma_smc/src")
+os.chdir("/path/to/git/gamma_smc/src")
 import reader
 
-alphas, betas, meta = reader.open_posteriors("output_file.raw.gz")
+alphas, betas, meta = reader.open_posteriors("/path/to/output_file.raw.gz")
 ```
 `alphas` and `betas` are pandas dataframes, and `meta` is a dictionary describing the dataset. The posterior distribution of the TMRCA at the $i$-th position, for the $j$-th pair, is described by $\Gamma(\alpha_{i,j}, \beta_{i,j})$, where $\alpha_{i,j}$ can be obtained by `alphas.iloc[i,j]`, and same for $\beta_{i,j}$. From this one can obtain, e.g. the mean posterior TMRCA, by $\alpha_{i,j}/\beta_{i,j}$. Other quantities, like the MAP (mode) of the variance can similarly be obtained.
 
