@@ -9,6 +9,7 @@
 
 int main(int argc, char** argv) {
     ScreenOutput screen;
+    screen.print_header();
 
     //
     // Print command line

@@ -7,30 +7,30 @@
 #include <sys/ioctl.h>
 
 namespace bcolors {
-    const std::string BLACK = "\033[0;30m";
-    const std::string RED = "\033[0;31m";
-    const std::string GREEN = "\033[0;32m";
-    const std::string BROWN = "\033[0;33m";
-    const std::string BLUE = "\033[0;34m";
-    const std::string PURPLE = "\033[0;35m";
-    const std::string CYAN = "\033[0;36m";
-    const std::string LIGHT_GRAY = "\033[0;37m";
-    const std::string DARK_GRAY = "\033[1;30m";
-    const std::string LIGHT_RED = "\033[1;31m";
-    const std::string LIGHT_GREEN = "\033[1;32m";
-    const std::string YELLOW = "\033[1;33m";
-    const std::string LIGHT_BLUE = "\033[1;34m";
-    const std::string LIGHT_PURPLE = "\033[1;35m";
-    const std::string LIGHT_CYAN = "\033[1;36m";
-    const std::string LIGHT_WHITE = "\033[1;37m";
-    const std::string BOLD = "\033[1m";
-    const std::string FAINT = "\033[2m";
-    const std::string ITALIC = "\033[3m";
-    const std::string UNDERLINE = "\033[4m";
-    const std::string BLINK = "\033[5m";
-    const std::string NEGATIVE = "\033[7m";
-    const std::string CROSSED = "\033[9m";
-    const std::string ENDC = "\033[0m";
+    const string BLACK = "\033[0;30m";
+    const string RED = "\033[0;31m";
+    const string GREEN = "\033[0;32m";
+    const string BROWN = "\033[0;33m";
+    const string BLUE = "\033[0;34m";
+    const string PURPLE = "\033[0;35m";
+    const string CYAN = "\033[0;36m";
+    const string LIGHT_GRAY = "\033[0;37m";
+    const string DARK_GRAY = "\033[1;30m";
+    const string LIGHT_RED = "\033[1;31m";
+    const string LIGHT_GREEN = "\033[1;32m";
+    const string YELLOW = "\033[1;33m";
+    const string LIGHT_BLUE = "\033[1;34m";
+    const string LIGHT_PURPLE = "\033[1;35m";
+    const string LIGHT_CYAN = "\033[1;36m";
+    const string LIGHT_WHITE = "\033[1;37m";
+    const string BOLD = "\033[1m";
+    const string FAINT = "\033[2m";
+    const string ITALIC = "\033[3m";
+    const string UNDERLINE = "\033[4m";
+    const string BLINK = "\033[5m";
+    const string NEGATIVE = "\033[7m";
+    const string CROSSED = "\033[9m";
+    const string ENDC = "\033[0m";
 }
 
 class ScreenOutput {
@@ -47,28 +47,28 @@ class ScreenOutput {
         }
 
         void print_header() {
-            std::string line(n_columns, '=');
-            std::string title = "Gamma-SMC";
-            std::cout << bcolors::BLUE << bcolors::BOLD << line << std::endl;
-            std::cout << std::setw((n_columns+title.length())/2) << title << std::endl;
-            std::cout << line << bcolors::ENDC << std::endl;
+            string line(n_columns, '=');
+            string title = "Gamma-SMC";
+            cout << endl;
+            cout << bcolors::BLUE << bcolors::BOLD << title << bcolors::ENDC << endl;
+            cout << endl;
         }
 
-        void print_title(std::string text) {
+        void print_title(string text) {
             T = std::chrono::high_resolution_clock::now();
-            std::string line(n_columns, '-');
-            std::cout << bcolors::BLUE << line << std::endl;
-            std::cout << " " << text << std::endl;
-            std::cout << line << bcolors::ENDC << std::endl;
+            string line(n_columns, '-');
+            cout << bcolors::BLUE << line << endl;
+            cout << " " << text << endl;
+            cout << line << bcolors::ENDC << endl;
         }
 
-        void print_subtitle(std::string text) {
+        void print_subtitle(string text) {
             T = std::chrono::high_resolution_clock::now();
-            std::cout << bcolors::BLUE << "--- " << text << bcolors::ENDC << std::endl;
+            cout << bcolors::BLUE << "--- " << text << bcolors::ENDC << endl;
         }
 
-        void print_item(std::string text) {
-            std::cout << "  * " << text << std::endl;
+        void print_item(string text) {
+            cout << "  * " << text << endl;
         }
 
         void print_done(double secs = -1) {
@@ -76,6 +76,6 @@ class ScreenOutput {
                 auto now = std::chrono::high_resolution_clock::now();
                 secs = std::chrono::duration_cast<std::chrono::duration<double>>(now - T).count();
             }
-            std::cout << std::string(n_columns - 17 - std::to_string(secs).length(), ' ') << bcolors::GREEN << "..done (" << std::fixed << std::setprecision(2) << secs << " secs)." << bcolors::ENDC  << std::endl;
+            cout << string(n_columns - 17 - std::to_string(secs).length(), ' ') << bcolors::GREEN << "..done (" << std::fixed << std::setprecision(2) << secs << " secs)." << bcolors::ENDC  << endl;
         }
 };
