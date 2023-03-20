@@ -5,16 +5,20 @@
 #include "flow_field.h"
 #include "gamma_smc.h"
 #include "data_processor.h"
+#include "screenoutput.h"
 
 int main(int argc, char** argv) {
+    ScreenOutput screen;
+
     //
     // Print command line
     //
-    cout << "Command line:" << endl;
+    screen.print_subtitle("Command line:");
     for (int i = 0; i < argc; ++i) {
         cout << argv[i] << ' ';
     }
     cout << endl << endl;
+
 
     //
     // Parse flags
@@ -156,6 +160,8 @@ int main(int argc, char** argv) {
     //
     // Load input file
     //
+    screen.print_subtitle("Reading input file...");
+
     vector<unique_ptr<SegregatingSite>> input_sites;  // TODO: Have another go at getting rid of the unique_ptr and just have vector<Seg...>
     vector<string> sample_names;    
     vector<int> samples_indices;
@@ -171,9 +177,15 @@ int main(int argc, char** argv) {
         samples_against_indices
     ); 
 
+    screen.print_item(boost::str(boost::format("Read %d samples.") % sample_names.size()));
+    screen.print_item(boost::str(boost::format("Read %d segregating sites.") % input_sites.size()));
+    screen.print_done();
+
     //
     // Load masks
     //
+    screen.print_subtitle("Reading mask(s) file...");
+
     vector<pair<int, int>> global_mask;
     if (vm.count("mask")) {
         readMask(mask_filename, global_mask);
@@ -185,12 +197,16 @@ int main(int argc, char** argv) {
     unordered_map<string, vector<pair<int, int>>> mask_map;
     if (vm.count("masks_per_sample")) {
         readMasks(masks_per_sample_filename, mask_map, sample_names);
-        cout << boost::format("Read %d bed filenames from list...\n") % mask_map.size();    
+        screen.print_item(boost::str(boost::format("Read %d masks.") % mask_map.size()));
     }
+    
+    screen.print_done();
 
     //
     // Process segments
     //
+    screen.print_subtitle("Creating segments...");
+
     DataProcessor data_processor(
         input_sites,
         sample_names,
@@ -201,9 +217,11 @@ int main(int argc, char** argv) {
         output_at_hets
     );
 
-    cout << "Evaluating at " << data_processor._n_segments << " positions, outputting at " << data_processor._seq_length << endl;
-    cout << boost::format("Loaded file, with %d sites\n") % input_sites.size() << endl;
+    screen.print_item(boost::str(
+        boost::format("Created %d segments, with %d output positions.") % data_processor._n_segments % data_processor._seq_length
+    ));
 
+    
     //
     // Create a list of pairs to work on
     //
@@ -230,7 +248,11 @@ int main(int argc, char** argv) {
         }
     }
 
-    cout << boost::format("Applying to %d haplotype pairs\n") % haplotype_pairs.size() << endl;
+    screen.print_item(boost::str(
+        boost::format("Applying to %d haplotype pairs") % haplotype_pairs.size()
+    ));
+    screen.print_done();
+
 
     //
     // Load flow field file
@@ -281,9 +303,7 @@ int main(int argc, char** argv) {
     //
     // Construct flow field cache
     //
-    cout << "Building flow field cache..." << endl;
-
-    auto t1 = std::chrono::high_resolution_clock::now();
+    screen.print_subtitle("Building flow field cache...");
     
     unique_ptr<FlowFieldCache> FFC(new FlowFieldCache(
         scaled_recombination_rate,
@@ -293,14 +313,12 @@ int main(int argc, char** argv) {
         true                // entropy clipping
     ));
 
-    auto t2 = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<float, std::milli> ms_float = t2 - t1;
-
-    cout << boost::format("Done (%f sec)") % (ms_float.count()/1000) << endl;
+    screen.print_done();
 
     //
     // Run
     //
+    screen.print_subtitle("Running...");
     CachedPairwiseGammaSMC PPC(
         input_sites,
         haplotype_pairs,
@@ -317,14 +335,7 @@ int main(int argc, char** argv) {
         out_raw
     );
 
-    cout << "Running..." << endl;
-
-
-    t1 = std::chrono::high_resolution_clock::now();  
     PPC.calculate_posteriors();
-    t2 = std::chrono::high_resolution_clock::now();
-    ms_float = t2 - t1;
-    cout << boost::format("calculate_posteriors() TOTAL (%f sec)") % (ms_float.count()/1000.0) << endl;
 
     //
     // Close output files
@@ -340,7 +351,24 @@ int main(int argc, char** argv) {
         output_file_raw_meta->close();
     }
 
-    fprintf(stderr, "\nCPU: %.3f sec; Peak RSS: %.3f GB\n",mp_cputime(), mp_peakrss() / 1024.0 / 1024.0 / 1024.0);	
+    double total_processing_time = PPC._timer_emissions + PPC._timer_forward + PPC._timer_backward;  // Excludes output time
+    double total_basepairs = data_processor._segments.back().pos + data_processor._segments.back().length - data_processor._segments.front().pos;
+    double time_per_bp_per_pair = total_processing_time / total_basepairs / haplotype_pairs.size();
+    double time_per_segment_per_pair = total_processing_time / data_processor._segments.size() / haplotype_pairs.size();
+    
+
+    screen.print_item(boost::str(boost::format("Emissions preparation time:\t%.3f secs") % PPC._timer_emissions));
+    screen.print_item(boost::str(boost::format("Forward pass time:\t\t%.3f secs") % PPC._timer_forward));
+    screen.print_item(boost::str(boost::format("Backward pass time:\t\t%.3f secs") % PPC._timer_backward));
+    screen.print_item(boost::str(boost::format("Output time:\t\t%.3f secs") % PPC._timer_output));
+
+    cout << endl;
+
+    // screen.print_item(boost::str(boost::format("Time per Gbp per pair\t%.3f secs") % (time_per_bp_per_pair * 1e9)));
+    // screen.print_item(boost::str(boost::format("Time per 1M segments per pair\t%.3f secs") % (time_per_segment_per_pair * 1e6)));
+    screen.print_item(boost::str(boost::format("Overall time:\t\t%.3f secs") % mp_cputime()));
+    screen.print_item(boost::str(boost::format("Peak memory:\t\t%.3f GB") % (mp_peakrss() / 1024.0 / 1024.0 / 1024.0)));	
+    screen.print_done();
 
     return 0;
 }

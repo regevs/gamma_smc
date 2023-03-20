@@ -279,9 +279,6 @@ void readVcf(
         }            
     }
     int n_samples_required = required_samples.size();
-    if (n_samples_required > 0) {
-        cout << boost::format("Only %d samples required...\n") % n_samples_required;
-    }
 
     // Resize the result
     ret.resize(0);
@@ -302,8 +299,6 @@ void readVcf(
     auto record = bcf_init();
 
     int n_samples = bcf_hdr_nsamples(header);
-    cout << boost::format("Reading %d samples in vcf...\n") % n_samples;
-
     int n_relevant_sample = 0;
     vector<bool> sample_is_required;
     for (int i = 0; i < n_samples; i++) {

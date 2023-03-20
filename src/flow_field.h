@@ -32,13 +32,11 @@ class FlowField {
             _mean_min_log10 = log10(mean_grid_def[0]);
             _mean_max_log10 = log10(mean_grid_def[1]);
             _mean_n_steps = mean_grid_def[2];
-            cout << boost::format("means: %f %f %d\n") % _mean_min_log10 % _mean_max_log10 % _mean_n_steps;
             _mean_step = (_mean_max_log10 - _mean_min_log10) / (_mean_n_steps - 1);
 
             _cv_min_log10 = log10(cv_grid_def[0]);
             _cv_max_log10 = log10(cv_grid_def[1]);
             _cv_n_steps = cv_grid_def[2];
-            cout << boost::format("cvs: %f %f %d\n") % _cv_min_log10 % _cv_max_log10 % _cv_n_steps;
             _cv_step = (_cv_max_log10 - _cv_min_log10) / (_cv_n_steps - 1);
 
         }

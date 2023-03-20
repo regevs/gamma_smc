@@ -3,6 +3,7 @@
 #include "common.h"
 #include "flow_field.h"
 #include "data_processor.h"
+#include "indicators.h"
 
 // https://gist.github.com/andersx/8057b2a6fd3d715d35eb
 
@@ -63,6 +64,11 @@ class CachedPairwiseGammaSMC {
     float* _last_processed_cv_log10 = NULL;
 
     int32_t* _pairwise_n_called = NULL;
+
+    double _timer_emissions = 0.0;
+    double _timer_forward = 0.0;
+    double _timer_backward = 0.0;
+    double _timer_output = 0.0;
 
     CachedPairwiseGammaSMC(
         const vector<unique_ptr<SegregatingSite>>& sites,
@@ -571,6 +577,11 @@ class CachedPairwiseGammaSMC {
     }
 
     void calculate_posteriors() {
+        auto t1 = std::chrono::high_resolution_clock::now();
+        auto t2 = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<float, std::milli> ms_float; 
+
+
         if (_output_file != NULL) {
             output_header();
         }
@@ -581,28 +592,43 @@ class CachedPairwiseGammaSMC {
 
         // If we have a global mask only, fill this once to be used for all chunks
         if (_data_processor.is_global_mask()) {
+            t1 = std::chrono::high_resolution_clock::now();
             prepare_global_n_called();
+            t2 = std::chrono::high_resolution_clock::now();
+            ms_float = t2 - t1;
+
+            _timer_emissions += (ms_float.count()/1000);
         }
 
         // Go through chunks of pairs
+        using namespace indicators;
+        BlockProgressBar bar{
+            option::BarWidth{70},
+            option::FontStyles{
+                std::vector<FontStyle>{FontStyle::bold}},
+            option::ShowElapsedTime{true},
+            option::ShowRemainingTime{true},                
+            option::MaxProgress{_n_pairs}
+        };
+        
         for (int n_pair = 0; n_pair < _n_pairs; n_pair += _n_pairs_in_chunk) {
 
-            auto t1 = std::chrono::high_resolution_clock::now();
+            t1 = std::chrono::high_resolution_clock::now();
             if (!_data_processor.is_global_mask()) {
                 prepare_pairwise_n_called(n_pair, _n_pairs_in_chunk);
             }
             prepare_pairwise_emissions(n_pair, _n_pairs_in_chunk);            
-            auto t2 = std::chrono::high_resolution_clock::now();
+            t2 = std::chrono::high_resolution_clock::now();
+            ms_float = t2 - t1;
 
-            std::chrono::duration<float, std::milli> ms_float = t2 - t1;
-            // cout << boost::format("prepare_pairwise_emissions() - Done (%f sec)") % (ms_float.count()/1000) << endl;
+            _timer_emissions += (ms_float.count()/1000);
 
             if (!_only_backward) {
                 t1 = std::chrono::high_resolution_clock::now();
                 forward_vectorized(n_pair, _n_pairs_in_chunk);        
                 t2 = std::chrono::high_resolution_clock::now();
                 ms_float = t2 - t1;
-                // cout << boost::format("forward_vectorized() - Done (%f sec)") % (ms_float.count()/1000) << endl;
+                _timer_forward += (ms_float.count()/1000);
             }
 
             if (!_only_forward) {
@@ -610,19 +636,34 @@ class CachedPairwiseGammaSMC {
                 backward_vectorized(n_pair, _n_pairs_in_chunk);
                 t2 = std::chrono::high_resolution_clock::now();
                 ms_float = t2 - t1;
-                // cout << boost::format("backward_vectorized() - Done (%f sec)") % (ms_float.count()/1000) << endl;
+                _timer_backward += (ms_float.count()/1000);
             }
 
             if (_output_file != NULL) {
+                t1 = std::chrono::high_resolution_clock::now();
                 output_chunk(n_pair, _n_pairs_in_chunk);
+                t2 = std::chrono::high_resolution_clock::now();
+                ms_float = t2 - t1;
+                _timer_output += (ms_float.count()/1000);
             }
 
             if (_output_file_raw != NULL) {
+                t1 = std::chrono::high_resolution_clock::now();
                 output_raw_chunk(n_pair, _n_pairs_in_chunk);
+                t2 = std::chrono::high_resolution_clock::now();
+                ms_float = t2 - t1;
+                _timer_output += (ms_float.count()/1000);
             }
 
+            bar.set_option(option::PostfixText{
+                std::to_string(n_pair) + "/" + std::to_string(_n_pairs)
+            });
+            bar.set_progress(n_pair);
 
         }
+
+        bar.mark_as_completed();
+        indicators::show_console_cursor(true);
     }
 
 };

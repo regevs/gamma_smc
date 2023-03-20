@@ -24,7 +24,7 @@ clean:
 	rm -f bin/*
 
 src/generate_canonical_flow_field.o: 
-src/gamma_smc.o: src/io.h src/common.h src/flow_field.h src/gamma_smc.h src/data_processor.h src/sys.h
+src/gamma_smc.o: src/io.h src/common.h src/flow_field.h src/gamma_smc.h src/data_processor.h src/sys.h src/screenoutput.h src/indicators.h
 
 
 
