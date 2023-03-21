@@ -58,9 +58,10 @@ class CachedPairwiseGammaSMC {
     float* _posteriors_alpha = NULL;
     float* _posteriors_beta = NULL;
 
-    zfp::array1<float> _zfp_alphas;
-    zfp::array1<float> _zfp_betas;
-    zfp::array1<float>::header _zfp_header;
+    double _zfp_fixed_rate = 16;
+    zfp::array2<float> _zfp_alphas;
+    zfp::array2<float> _zfp_betas;
+    zfp::array2<float>::header _zfp_header;
 
     int8_t* _pairwise_segment_types = NULL;
 
@@ -110,9 +111,9 @@ class CachedPairwiseGammaSMC {
         _output_file(output_file),
         _output_file_raw_header(output_file_raw_header),
         _output_file_raw(output_file_raw),
-        _zfp_alphas(_seq_length * _n_pairs_in_chunk, 16),
-        _zfp_betas(_seq_length * _n_pairs_in_chunk, 16),
-        _zfp_header(zfp::array1<float>(_seq_length * _n_pairs_rounded_up * 2, 16))
+        _zfp_alphas(_seq_length, _n_pairs_in_chunk, _zfp_fixed_rate),
+        _zfp_betas(_seq_length, _n_pairs_in_chunk, _zfp_fixed_rate),
+        _zfp_header(zfp::array2<float>(_seq_length, _n_pairs_rounded_up * 2, _zfp_fixed_rate))
     {        
         // Allocate memory
         

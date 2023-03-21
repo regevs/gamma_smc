@@ -351,8 +351,7 @@ int main(int argc, char** argv) {
         output_file->close();
     }
 
-    if (out_raw != NULL) {
-        boost::iostreams::close(outbuf_raw); // Don't forget this!
+    if (output_file_raw != NULL) {
         output_file_raw->close();
         output_file_raw_meta->close();
     }
