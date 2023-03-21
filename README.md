@@ -10,13 +10,14 @@ Both functionality and documentation are in progress, and will be updated prior 
 
 - [Boost](https://www.boost.org/) (tested with version 1.74)
 - [htslib](https://github.com/samtools/htslib) (tested with version 1.15)
+- [zfp]() (tested with version 1.0.0)
 - [pandas](https://pandas.pydata.org/) (tested with version 1.4.1) - not strictly needed but used to parse the raw data
 
 An easy way to manage these installations is using `conda`:
 ```
 conda create --name gamma_smc -y python
 conda activate gamma_smc
-conda install --name gamma_smc --channel conda-forge boost>=1.74
+conda install --name gamma_smc --channel conda-forge boost>=1.74 zfp==1.0.0 zfpy==1.0.0
 conda install --name gamma_smc --channel bioconda htslib>=1.15
 conda install --name gamma_smc --channel anaconda pandas>=1.4.1
 ```
