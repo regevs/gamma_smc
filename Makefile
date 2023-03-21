@@ -4,7 +4,7 @@ CXXFLAGS=	-std=c++14  -Wall -DNDEBUG -O3 -g -ffast-math -funsafe-math-optimizati
 			-mavx2 -mfma -march=native -ftree-vectorize -msse -msse2 -msse3 -pipe -faligned-new  \
 			-Wno-unused-variable -Wno-strict-aliasing 
 
-LDFLAGS=	-O3 -g -larb -lflint -lpthread -lgsl -lgslcblas -lm \
+LDFLAGS=	-O3 -g -larb -lflint -lpthread -lgsl -lgslcblas -lm -lzfp \
 			-lhts -lboost_iostreams -lboost_program_options -lboost_system -lboost_filesystem
 
 .SUFFIXES:.c .cpp .o
@@ -13,7 +13,7 @@ LDFLAGS=	-O3 -g -larb -lflint -lpthread -lgsl -lgslcblas -lm \
 %.o: %.cpp	
 	$(CXX) $(CXXFLAGS) -o $@ -c $<
 
-all: bin/gamma_smc bin/generate_canonical_flow_field
+all: bin/gamma_smc
 
 bin/%: src/%.o
 	mkdir -p bin
