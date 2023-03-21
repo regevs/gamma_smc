@@ -17,9 +17,12 @@ An easy way to manage these installations is using `conda`:
 ```
 conda create --name gamma_smc -y python
 conda activate gamma_smc
-conda install --name gamma_smc --channel conda-forge boost>=1.74 zfp==1.0.0 zfpy==1.0.0
+conda install --name gamma_smc --channel conda-forge boost-cpp>=1.74 zfp==1.0.0 zfpy==1.0.0
 conda install --name gamma_smc --channel bioconda htslib>=1.15
-conda install --name gamma_smc --channel anaconda pandas>=1.4.1
+conda install --name gamma_smc pandas
+export CPATH=$CONDA_PREFIX/include:$CPATH
+export LIBRARY_PATH=$CONDA_PREFIX/lib:$LIBRARY_PATH
+export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
 ```
 This creates a new environment, installs the requirements and adds their paths to the relevant environmental variables as required below.
 

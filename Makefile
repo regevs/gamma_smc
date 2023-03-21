@@ -1,11 +1,12 @@
 CXX=g++
 
-CXXFLAGS=	-std=c++14  -Wall -DNDEBUG -O3 -g -ffast-math -funsafe-math-optimizations -fno-math-errno \
+CXXFLAGS =	-std=c++14  -Wall -DNDEBUG -O3 -g -ffast-math -funsafe-math-optimizations -fno-math-errno \
 			-mavx2 -mfma -march=native -ftree-vectorize -msse -msse2 -msse3 -pipe -faligned-new  \
 			-Wno-unused-variable -Wno-strict-aliasing 
 
-LDFLAGS=	-O3 -g -larb -lflint -lpthread -lgsl -lgslcblas -lm -lzfp \
-			-lhts -lboost_iostreams -lboost_program_options -lboost_system -lboost_filesystem
+LDFLAGS =	-O3 -g -lm -lboost_iostreams -lboost_program_options -lboost_system -lboost_filesystem
+LDFLAGS_MAIN = -lhts -lzfp
+LDFLAGS_FF = -larb -lflint -lpthread -lgsl -lgslcblas
 
 .SUFFIXES:.c .cpp .o
 .PHONY:all clean
@@ -15,9 +16,13 @@ LDFLAGS=	-O3 -g -larb -lflint -lpthread -lgsl -lgslcblas -lm -lzfp \
 
 all: bin/gamma_smc
 
-bin/%: src/%.o
+bin/gamma_smc: src/gamma_smc.o
 	mkdir -p bin
-	$(CXX) -o $@ $(LDFLAGS) $<
+	$(CXX) -o $@ $(LDFLAGS) $(LDFLAGS_MAIN) $<
+
+bin/generate_canonical_flow_field: src/generate_canonical_flow_field.o
+	mkdir -p bin
+	$(CXX) -o $@ $(LDFLAGS) $(LDFLAGS_FF) $<
 
 clean:
 	rm -f src/*.o

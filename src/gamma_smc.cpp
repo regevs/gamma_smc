@@ -87,7 +87,7 @@ int main(int argc, char** argv) {
     }
 
     auto output_filename = vm["output"].as<string>();
-    auto output_directory = boost::filesystem::path(output_filename).parent_path();
+    auto output_directory = boost::filesystem::path(output_filename).remove_filename();
     boost::filesystem::create_directories(output_directory);
     
     if (vm.count("only_within") && vm.count("samples_against")) {
@@ -124,7 +124,7 @@ int main(int argc, char** argv) {
     string output_text_filename;
     if (vm.count("output_text")) {
         output_text_filename = vm["output_text"].as<string>();
-        auto output_text_directory = boost::filesystem::path(output_text_filename).parent_path();
+        auto output_text_directory = boost::filesystem::path(output_text_filename).remove_filename();
         boost::filesystem::create_directories(output_text_directory);
     }
 
