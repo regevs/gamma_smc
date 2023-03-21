@@ -58,6 +58,10 @@ class CachedPairwiseGammaSMC {
     float* _posteriors_alpha = NULL;
     float* _posteriors_beta = NULL;
 
+    zfp::array1<float> _zfp_alphas;
+    zfp::array1<float> _zfp_betas;
+    zfp::array1<float>::header _zfp_header;
+
     int8_t* _pairwise_segment_types = NULL;
 
     float* _last_processed_mean_log10 = NULL;
@@ -105,7 +109,10 @@ class CachedPairwiseGammaSMC {
         _seq_length(data_processor._seq_length),
         _output_file(output_file),
         _output_file_raw_header(output_file_raw_header),
-        _output_file_raw(output_file_raw)
+        _output_file_raw(output_file_raw),
+        _zfp_alphas(_seq_length * _n_pairs_in_chunk, 16),
+        _zfp_betas(_seq_length * _n_pairs_in_chunk, 16),
+        _zfp_header(zfp::array1<float>(_seq_length * _n_pairs_rounded_up * 2, 16))
     {        
         // Allocate memory
         
@@ -561,19 +568,29 @@ class CachedPairwiseGammaSMC {
         }
         (*_output_file_raw_header) << boost::format("\n\t]\n");  
         (*_output_file_raw_header) << ("}\n");
+
+        // Output the zfp header to the actual output file
+        _output_file_raw->write(
+            reinterpret_cast<const char*>(_zfp_header.data()), 
+            _zfp_header.size_bytes()
+        );
     }
 
     // This just dumps the memory, so it later needs to be loaded in a particular way
     void output_raw_chunk(long starting_n_pair, long num_pairs) { 
+        _zfp_alphas.set(_posteriors_alpha);
+        _zfp_alphas.flush_cache();
         _output_file_raw->write(
-            reinterpret_cast<const char*>(_posteriors_alpha), 
-            sizeof(float) * _seq_length * _n_pairs_in_chunk
+            reinterpret_cast<const char*>(_zfp_alphas.compressed_data()), 
+            _zfp_alphas.compressed_size()
         );
 
+        _zfp_betas.set(_posteriors_beta);
+        _zfp_betas.flush_cache();
         _output_file_raw->write(
-            reinterpret_cast<const char*>(_posteriors_beta), 
-            sizeof(float) * _seq_length * _n_pairs_in_chunk
-        ); 
+            reinterpret_cast<const char*>(_zfp_betas.compressed_data()), 
+            _zfp_betas.compressed_size()
+        );
     }
 
     void calculate_posteriors() {

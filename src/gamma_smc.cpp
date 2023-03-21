@@ -294,16 +294,10 @@ int main(int argc, char** argv) {
         out = new ostream(&outbuf);
     }
 
-    ostream* out_raw = NULL;
     ofstream* output_file_raw_meta = NULL;
     ofstream* output_file_raw = NULL;
-    boost::iostreams::filtering_streambuf<boost::iostreams::output> outbuf_raw;
     if (output_filename.size() > 0) {
         output_file_raw = new ofstream(output_filename, ios_base::out | ios_base::binary);        
-        outbuf_raw.push(boost::iostreams::gzip_compressor());
-        outbuf_raw.push(*output_file_raw);
-        out_raw = new ostream(&outbuf_raw);
-
         output_file_raw_meta = new ofstream(output_filename + ".meta", ios_base::out);        
     }
 
@@ -344,7 +338,7 @@ int main(int argc, char** argv) {
         only_backward,
         out,
         output_file_raw_meta,
-        out_raw
+        output_file_raw
     );
 
     PPC.calculate_posteriors();

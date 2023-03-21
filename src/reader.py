@@ -1,11 +1,11 @@
 import numpy as np
 import pandas as pd
-import gzip
+import zfpy
 import json
 
 def open_posteriors(filename):
     meta = json.load(open(filename + ".meta"))
-    raw_floats = np.frombuffer(gzip.open(filename).read(), dtype=np.float32)
+    raw_floats = zfpy.decompress_numpy(open(filename, "rb").read())
     n_chunks = int(np.ceil(meta["num_pairs"] / meta["chunk_size"]))
 
     raw_floats = raw_floats.reshape((

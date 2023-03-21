@@ -20,6 +20,8 @@
 #include <math.h> 
 #include <stdlib.h>
 
+#include <zfp/array1.hpp>
+
 // TODO: AVX DEFINES
 #include <immintrin.h>
 #include <emmintrin.h>
