@@ -5,7 +5,7 @@ CXXFLAGS =	-std=c++14  -Wall -DNDEBUG -O3 -g -ffast-math -funsafe-math-optimizat
 			-Wno-unused-variable -Wno-strict-aliasing 
 
 LDFLAGS =	-O3 -g -lm -lboost_iostreams -lboost_program_options -lboost_system -lboost_filesystem
-LDFLAGS_MAIN = -lhts -lzfp
+LDFLAGS_MAIN = -lhts -lzstd
 LDFLAGS_FF = -larb -lflint -lpthread -lgsl -lgslcblas
 
 .SUFFIXES:.c .cpp .o

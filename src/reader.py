@@ -1,11 +1,18 @@
 import numpy as np
 import pandas as pd
-import zfpy
+import zstandard
 import json
 
 def open_posteriors(filename):
     meta = json.load(open(filename + ".meta"))
-    raw_floats = zfpy.decompress_numpy(open(filename, "rb").read())
+    raw_floats = np.frombuffer(
+        zstandard.ZstdDecompressor().decompress(
+            open(filename, "rb").read(),
+            max_output_size = meta["sequence_length"] * meta["num_pairs"] * 2 * 4,
+        ),
+        dtype=np.float32
+    )
+
     n_chunks = int(np.ceil(meta["num_pairs"] / meta["chunk_size"]))
 
     raw_floats = raw_floats.reshape((

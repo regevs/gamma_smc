@@ -42,6 +42,7 @@ int main(int argc, char** argv) {
         ("cache_size,z", po::value<int>()->default_value(1000), "Maximum cache size in basepairs")
         ("only_forward,y", "Calculate only forward pass")
         ("only_backward,d", "Calculate only backward pass")
+        ("zstd_compression_level", po::value<int>()->default_value(1), "zstd compression level")
         ("help", "Produce help message")
     ;
 
@@ -338,7 +339,8 @@ int main(int argc, char** argv) {
         only_backward,
         out,
         output_file_raw_meta,
-        output_file_raw
+        output_file_raw,
+        vm["zstd_compression_level"].as<int>()
     );
 
     PPC.calculate_posteriors();

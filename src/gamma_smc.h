@@ -58,10 +58,11 @@ class CachedPairwiseGammaSMC {
     float* _posteriors_alpha = NULL;
     float* _posteriors_beta = NULL;
 
-    double _zfp_fixed_rate = 16;
-    zfp::array2<float> _zfp_alphas;
-    zfp::array2<float> _zfp_betas;
-    zfp::array2<float>::header _zfp_header;
+    ZSTD_CCtx* _zstd_cctx;
+    size_t _zstd_compressed_buffer_size;
+    void* _zstd_compressed_buffer;
+    int _zstd_compression_level;
+    ZSTD_outBuffer _zstd_output;
 
     int8_t* _pairwise_segment_types = NULL;
 
@@ -88,7 +89,8 @@ class CachedPairwiseGammaSMC {
         bool only_backward,
         ostream* output_file,
         ofstream* output_file_raw_header,
-        ostream* output_file_raw
+        ostream* output_file_raw,
+        int zstd_compression_level
     ) : 
         _sites(sites), 
         _haplotype_pairs(haplotype_pairs),
@@ -111,9 +113,9 @@ class CachedPairwiseGammaSMC {
         _output_file(output_file),
         _output_file_raw_header(output_file_raw_header),
         _output_file_raw(output_file_raw),
-        _zfp_alphas(_seq_length, _n_pairs_in_chunk, _zfp_fixed_rate),
-        _zfp_betas(_seq_length, _n_pairs_in_chunk, _zfp_fixed_rate),
-        _zfp_header(zfp::array2<float>(_seq_length, _n_pairs_rounded_up * 2, _zfp_fixed_rate))
+        _zstd_cctx(ZSTD_createCCtx()),        
+        _zstd_compressed_buffer_size(ZSTD_CStreamOutSize()),         
+        _zstd_compression_level(zstd_compression_level)
     {        
         // Allocate memory
         
@@ -143,7 +145,12 @@ class CachedPairwiseGammaSMC {
 
         // Working vector
         _last_processed_mean_log10 = aligned_alloc_float(_n_pairs_in_chunk, false);
-        _last_processed_cv_log10 = aligned_alloc_float(_n_pairs_in_chunk, false);        
+        _last_processed_cv_log10 = aligned_alloc_float(_n_pairs_in_chunk, false);
+
+        // Set up zstd compression
+        _zstd_compressed_buffer = malloc(_zstd_compressed_buffer_size);
+        ZSTD_CCtx_setParameter(_zstd_cctx, ZSTD_c_compressionLevel, _zstd_compression_level);
+        ZSTD_CCtx_setParameter(_zstd_cctx, ZSTD_c_checksumFlag, 1);
     }
 
     virtual ~CachedPairwiseGammaSMC() {
@@ -157,6 +164,9 @@ class CachedPairwiseGammaSMC {
         free(_last_processed_mean_log10);
         free(_last_processed_cv_log10);
         free(_pairwise_n_called);
+
+        free(_zstd_compressed_buffer);
+        free(_zstd_cctx);
     }
 
     void prepare_global_n_called() {
@@ -569,29 +579,35 @@ class CachedPairwiseGammaSMC {
         }
         (*_output_file_raw_header) << boost::format("\n\t]\n");  
         (*_output_file_raw_header) << ("}\n");
-
-        // Output the zfp header to the actual output file
-        _output_file_raw->write(
-            reinterpret_cast<const char*>(_zfp_header.data()), 
-            _zfp_header.size_bytes()
-        );
     }
 
     // This just dumps the memory, so it later needs to be loaded in a particular way
-    void output_raw_chunk(long starting_n_pair, long num_pairs) { 
-        _zfp_alphas.set(_posteriors_alpha);
-        _zfp_alphas.flush_cache();
-        _output_file_raw->write(
-            reinterpret_cast<const char*>(_zfp_alphas.compressed_data()), 
-            _zfp_alphas.compressed_size()
-        );
+    void output_raw_chunk(long starting_n_pair, long num_pairs, bool last_chunk) { 
+        int finished;
+        ZSTD_inBuffer input;        
+        ZSTD_EndDirective const mode = last_chunk ? ZSTD_e_end : ZSTD_e_continue;                
 
-        _zfp_betas.set(_posteriors_beta);
-        _zfp_betas.flush_cache();
-        _output_file_raw->write(
-            reinterpret_cast<const char*>(_zfp_betas.compressed_data()), 
-            _zfp_betas.compressed_size()
-        );
+        input = {reinterpret_cast<void *>(_posteriors_alpha), _seq_length * _n_pairs_in_chunk * sizeof(float), 0};   
+        do {
+            _zstd_output = {_zstd_compressed_buffer, _zstd_compressed_buffer_size, 0};
+            size_t const remaining = ZSTD_compressStream2(_zstd_cctx, &_zstd_output , &input, ZSTD_e_continue);
+            _output_file_raw->write(
+                reinterpret_cast<const char*>(_zstd_compressed_buffer), 
+                _zstd_output.pos
+            );
+            finished = last_chunk ? (remaining == 0) : (input.pos == input.size);
+        } while (!finished);
+
+        input = {reinterpret_cast<void *>(_posteriors_beta), _seq_length * _n_pairs_in_chunk * sizeof(float), 0};        
+        do {
+            _zstd_output = {_zstd_compressed_buffer, _zstd_compressed_buffer_size, 0};
+            size_t const remaining = ZSTD_compressStream2(_zstd_cctx, &_zstd_output , &input, mode);
+            _output_file_raw->write(
+                reinterpret_cast<const char*>(_zstd_compressed_buffer), 
+                _zstd_output.pos
+            );
+            finished = last_chunk ? (remaining == 0) : (input.pos == input.size);
+        } while (!finished);
     }
 
     void calculate_posteriors() {
@@ -630,6 +646,7 @@ class CachedPairwiseGammaSMC {
         };
         
         for (int n_pair = 0; n_pair < _n_pairs; n_pair += _n_pairs_in_chunk) {
+            bool last_chunk = ((n_pair + _n_pairs_in_chunk) >= _n_pairs);
 
             t1 = std::chrono::high_resolution_clock::now();
             if (!_data_processor.is_global_mask()) {
@@ -667,7 +684,7 @@ class CachedPairwiseGammaSMC {
 
             if (_output_file_raw != NULL) {
                 t1 = std::chrono::high_resolution_clock::now();
-                output_raw_chunk(n_pair, _n_pairs_in_chunk);
+                output_raw_chunk(n_pair, _n_pairs_in_chunk, last_chunk);
                 t2 = std::chrono::high_resolution_clock::now();
                 ms_float = t2 - t1;
                 _timer_output += (ms_float.count()/1000);
