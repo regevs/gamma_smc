@@ -6,18 +6,21 @@ Both functionality and documentation are in progress, and will be updated prior 
 
 ## Requirements
 
-`gamma_smc` requires the following to be installed in your system:
+`gamma_smc` requires the following to be installed in your system to compile:
 
 - [Boost](https://www.boost.org/) (tested with version 1.74)
 - [htslib](https://github.com/samtools/htslib) (tested with version 1.15)
-- [zfp](https://github.com/LLNL/zfp) (tested with version 1.0.0)
-- [pandas](https://pandas.pydata.org/) (tested with version 1.4.1) - not strictly needed but used to parse the raw data
+- [zstd](https://facebook.github.io/zstd/) (tested with version 1.5.2)
+
+This is needed to parse the raw data:
+- [zstandard](https://github.com/indygreg/python-zstandard) (tested with version 0.19.0)
+- [pandas](https://pandas.pydata.org/) (tested with version 1.4.1) 
 
 An easy way to manage these installations is using `conda`:
 ```
 conda create --name gamma_smc -y python
 conda activate gamma_smc
-conda install --name gamma_smc --channel conda-forge boost-cpp>=1.74 zfp==1.0.0 zfpy==1.0.0
+conda install --name gamma_smc --channel conda-forge boost-cpp>=1.74 zstd==1.5.2 zstandard==0.19.0
 conda install --name gamma_smc --channel bioconda htslib>=1.15
 conda install --name gamma_smc pandas
 export CPATH=$CONDA_PREFIX/include:$CPATH
@@ -51,7 +54,7 @@ $ bin/gamma_smc
     -m <i>scaled_mutation_rate</i> 
     -r <i>scaled_recombination_rate</i>
     -i <i>input_file.vcf</i>
-    -o <i>output_file.gz</i>
+    -o <i>output_file.zst</i>
 </pre>
 
 There are more options. Below we discuss each in detail.
@@ -138,13 +141,11 @@ Gamma-SMC caches operating on stretches of homozygosity or missingness for fast 
 
 ## Output
 <pre>
---output, -o <i>posteriors.gz</i>
+--output, -o <i>posteriors.zst</i>
 </pre>
-The output file is a binary, `gzip` compressed array of the alphas and betas inferred by the algorithm. It is accompanied by a file with metadata to parse it (json format), with the same name and additional suffix `.meta` (e.g., `posteriors.gz.meta`).
+The output file is a binary, `zstd` compressed array of the alphas and betas inferred by the algorithm. It is accompanied by a file with metadata to parse it (json format), with the same name and additional suffix `.meta` (e.g., `posteriors.zst.meta`).
 
 The function `open_posteriors` in `src/reader.py` is used to parse the binary file using the metadata, see below for more.
-
-Inside the `.meta` file there is a dictionary translating from the haplotype numbers used in the dataframe to sample names, e.g. `sample_names = {0: "sample_name.0", 1: "sample_name.1", 2: "another_sample_name.0", ...}` etc.
 
 ## Specifying output positions
 Inferring the posterior TMRCA distribution at each and every position is too computationally expensive and not needed. Gamma-SMC therefore supports outputting in two schemes: (i) at segregating sites; (ii) in fixed jumps along the genome. Both schemes can be used concurrently.
@@ -161,16 +162,16 @@ Output every <i>jump_size</i> basepairs. Turned off by default. A good value is 
 # Interpreting the output
 Use `open_posteriors` from `src/reader.py` to open the output:
 ```Python
-os.chdir("/path/to/git/gamma_smc/src")
+import sys; sys.path.append("/path/to/git/gamma_smc/src")
 import reader
 
-alphas, betas, meta = reader.open_posteriors("/path/to/output_file.raw.gz")
+alphas, betas, meta = reader.open_posteriors("/path/to/output_file.zst")
 ```
-`alphas` and `betas` are pandas dataframes, and `meta` is a dictionary describing the dataset. The posterior distribution of the TMRCA at the $i$-th position, for the $j$-th pair, is described by $\Gamma(\alpha_{i,j}, \beta_{i,j})$, where $\alpha_{i,j}$ can be obtained by `alphas.iloc[i,j]`, and same for $\beta_{i,j}$. From this one can obtain, e.g. the mean posterior TMRCA, by $\alpha_{i,j}/\beta_{i,j}$. Other quantities, like the MAP (mode) of the variance can similarly be obtained.
+The returned `alphas` and `betas` are pandas dataframes, and `meta` is a dictionary describing the dataset. The posterior distribution of the TMRCA at the $i$-th position, for the $j$-th pair, is described by $\Gamma(\alpha_{i,j}, \beta_{i,j})$, where $\alpha_{i,j}$ can be obtained by `alphas.iloc[i,j]`, and same for $\beta_{i,j}$. From this one can obtain, e.g. the mean posterior TMRCA, by $\alpha_{i,j}/\beta_{i,j}$. Other quantities, like the MAP (mode) of the variance can similarly be obtained.
 
 In `meta`, useful properties are:
 - `output_positions` - a list of genomic positions at which TMRCA posteriors were inferred
 - `pairs` - the order of pairs for which posteriors were inferred, using serial numbers (e.g. `0_1`)
-- `sample_names` - a mapping from a serial number a the sample name
+- `sample_names` - a mapping from a serial number a the sample name; e.g. `sample_names = {0: "sample_name.0", 1: "sample_name.1", 2: "another_sample_name.0", ...}` 
 
 
