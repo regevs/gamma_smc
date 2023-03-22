@@ -10,7 +10,7 @@ Both functionality and documentation are in progress, and will be updated prior 
 
 - [Boost](https://www.boost.org/) (tested with version 1.74)
 - [htslib](https://github.com/samtools/htslib) (tested with version 1.15)
-- [zfp]() (tested with version 1.0.0)
+- [zfp](https://github.com/LLNL/zfp) (tested with version 1.0.0)
 - [pandas](https://pandas.pydata.org/) (tested with version 1.4.1) - not strictly needed but used to parse the raw data
 
 An easy way to manage these installations is using `conda`:
