@@ -349,6 +349,12 @@ void readVcf(
 
     vector<int8_t> int_alleles;
 
+    IndeterminateProgressBar bar{
+        option::BarWidth{70},
+        option::FontStyles{
+            std::vector<FontStyle>{FontStyle::bold}},
+    };
+
     while (true) {
         // Read record
         int retcode = bcf_read(file, header, record);
@@ -420,7 +426,21 @@ void readVcf(
             ret.back()->pos = record->pos;
             ret.back()->alleles = int_alleles;        
         }
+
+        // Arbitrary number to make progress not seem so round :)
+        if (ret.size() % 4587 == 0) {
+            bar.set_option(option::PostfixText{
+                std::to_string(ret.size()) + " sites"
+            });
+            bar.tick();
+        }
     }
+
+    bar.set_option(option::PostfixText{
+        std::to_string(ret.size()) + " sites"
+    });
+    bar.mark_as_completed();
+    indicators::show_console_cursor(true);
 
     free(gt_arr);
     bcf_destroy(record);

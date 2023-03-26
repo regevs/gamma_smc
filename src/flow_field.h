@@ -534,6 +534,15 @@ class FlowFieldCache {
         float u, v;
         //float clipped_alpha, clipped_beta;
 
+        BlockProgressBar bar{
+            option::BarWidth{70},
+            option::FontStyles{
+                std::vector<FontStyle>{FontStyle::bold}},
+            option::ShowElapsedTime{true},
+            option::ShowRemainingTime{true},                
+            option::MaxProgress{_n_steps * 3 - 1}
+        };
+
         // The first step builds off the flow field
         mean_log10 = _mean_min_log10;
         for (int row = 0; row < _mean_n_steps; row++) {
@@ -664,6 +673,8 @@ class FlowFieldCache {
 
                 }                
             }
+
+            bar.tick();
         }
 
         flatten(_cached_missing_unravelled, _cached_missing_flat);
@@ -734,6 +745,8 @@ class FlowFieldCache {
                     _cached_hom_stretch_het_site_unravelled[unravel_entry(row, col, n_step, 1)] = updated_cv_log10; //clipped_beta;
                 }                
             }
+
+            bar.tick();
         }
 
         flatten(_cached_hom_stretch_hom_site_unravelled, _cached_hom_stretch_hom_site_flat);
@@ -871,7 +884,12 @@ class FlowFieldCache {
                 }                
                 mean_log10 += _mean_step;
             }
+
+            bar.tick();
         }
+
+        bar.mark_as_completed();
+        indicators::show_console_cursor(true);
 
         flatten(_cached_hom_site_hom_stretch_unravelled, _cached_hom_site_hom_stretch_flat);
         flatten(_cached_het_site_hom_stretch_unravelled, _cached_het_site_hom_stretch_flat);

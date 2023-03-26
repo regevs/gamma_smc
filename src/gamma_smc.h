@@ -3,7 +3,6 @@
 #include "common.h"
 #include "flow_field.h"
 #include "data_processor.h"
-#include "indicators.h"
 
 // https://gist.github.com/andersx/8057b2a6fd3d715d35eb
 
@@ -634,8 +633,7 @@ class CachedPairwiseGammaSMC {
             _timer_emissions += (ms_float.count()/1000);
         }
 
-        // Go through chunks of pairs
-        using namespace indicators;
+        // Go through chunks of pairs        
         BlockProgressBar bar{
             option::BarWidth{70},
             option::FontStyles{
@@ -697,6 +695,10 @@ class CachedPairwiseGammaSMC {
 
         }
 
+        bar.set_option(option::PostfixText{
+            std::to_string(_n_pairs) + "/" + std::to_string(_n_pairs)
+        });
+        bar.set_progress(_n_pairs);
         bar.mark_as_completed();
         indicators::show_console_cursor(true);
     }

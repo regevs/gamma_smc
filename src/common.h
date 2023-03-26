@@ -26,6 +26,9 @@
 #include <immintrin.h>
 #include <emmintrin.h>
 
+#include "indicators.h"
+using namespace indicators;
+
 namespace po = boost::program_options;
 
 using namespace std;
