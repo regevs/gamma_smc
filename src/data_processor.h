@@ -11,6 +11,7 @@ class DataProcessor {
     unordered_map<string, vector<pair<int, int>>>& _mask_map;
     int _posterior_every;
     int _flow_field_cache_n_steps;
+    bool _output_at_every;
     bool _output_at_hets;
 
     bool _is_global_mask;
@@ -35,6 +36,7 @@ class DataProcessor {
         _mask_map(mask_map),
         _posterior_every(posterior_every),
         _flow_field_cache_n_steps(flow_field_cache_n_steps),
+        _output_at_every(_posterior_every > 0),
         _output_at_hets(output_at_hets),
         _is_global_mask(_mask_map.size() == 0)
     {
@@ -60,12 +62,15 @@ class DataProcessor {
         segment_type seg_type;
 
         while (n_pos < last) {
-            jump_to_pos = std::min(_sites[next_site_index]->pos, next_output);
+            jump_to_pos = _sites[next_site_index]->pos;
+            if (_output_at_every) {
+                jump_to_pos = std::min(jump_to_pos, next_output);
+            }
 
             // While we can't jump to the next site within the cache
             while (jump_to_pos - n_pos > _flow_field_cache_n_steps) {
                 _segments.push_back({
-                    n_pos + _flow_field_cache_n_steps,      // pos
+                    n_pos,                                  // pos
                     _flow_field_cache_n_steps,              // segment length
                     HOM_STRETCH,                            // segment type - meaningless default here; TODO: Remove field?
                     prev_to_output,                         // output at start
@@ -78,11 +83,11 @@ class DataProcessor {
             }
 
             // output only if: (i) we output hets; or (ii) it's an output site
-            to_output = (jump_to_pos == next_output) || _output_at_hets;
+            to_output = (_output_at_every && (jump_to_pos == next_output)) || _output_at_hets;
 
             // Now we can jump
             _segments.push_back({
-                jump_to_pos,                  // pos
+                n_pos,                          // pos
                 (int) jump_to_pos - n_pos,    // segment length
                 HOM_STRETCH,                     // segment type - meaningless default here; TODO: Remove field?
                 prev_to_output,     // output at start
@@ -99,7 +104,7 @@ class DataProcessor {
             if (jump_to_pos == _sites[next_site_index]->pos) {
                 next_site_index++;
             }
-            if (jump_to_pos == next_output) {
+            if (_output_at_every && (jump_to_pos == next_output)) {
                 next_output += _posterior_every;
             }  
         }
