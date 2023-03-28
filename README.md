@@ -40,6 +40,11 @@ To generate a flow field yourself (see below), you also need:
 
 Make sure that the installation paths are set, e.g. by appending `include` paths to the `CPATH` environmental variable, and `lib` paths to `LIBRARY_PATH` and `LD_LIBRARY_PATH` environmental variables. 
 
+To compile, you need: 
+- The linux OS
+- A processor that supports AVX2 instructions (run `lscpu | grep avx2` to confirm)
+- A modern C++ compiler (tested with gcc 8.5.0)
+
 Download and compile with:
 ```
 git clone https://github.com/regevs/gamma_smc
@@ -74,7 +79,7 @@ If no option is specified, all the samples in the input file will be used.
 If given, this is the path to a file containing a subset of sample names. This is a text file with a single sample name per line. Only these samples will be used.
 
 ## Specifying a subset of haplotype pairs
-If no option is given, posteriors will be inferred for all haplotype pairs across all selected samples.
+If no option is given, posteriors will be inferred for all haplotype pairs across all selected samples. **Note**: For meaningful inference between haplotypes across different samples, your data need to be phased with reasonable accuracy. If your sampled are not/poorly phased, you can still run inference within each sample (see `-w` below).
 
 <pre>
 --only_within, -w
@@ -167,7 +172,7 @@ import reader
 
 alphas, betas, meta = reader.open_posteriors("/path/to/output_file.zst")
 ```
-The returned `alphas` and `betas` are pandas dataframes, and `meta` is a dictionary describing the dataset. The posterior distribution of the TMRCA at the $i$-th position, for the $j$-th pair, is described by $\Gamma(\alpha_{i,j}, \beta_{i,j})$, where $\alpha_{i,j}$ can be obtained by `alphas.iloc[i,j]`, and same for $\beta_{i,j}$. From this one can obtain, e.g. the mean posterior TMRCA, by $\alpha_{i,j}/\beta_{i,j}$. Other quantities, like the MAP (mode) of the variance can similarly be obtained.
+The returned `alphas` and `betas` are pandas dataframes, and `meta` is a dictionary describing the dataset. The posterior distribution of the TMRCA at the $i$-th position, for the $j$-th pair, is described by $\Gamma(\alpha_{i,j}, \beta_{i,j})$, where $\alpha_{i,j}$ can be obtained by `alphas.iloc[i,j]`, and same for $\beta_{i,j}$. From this one can obtain, e.g. the mean posterior TMRCA, by $\alpha_{i,j}/\beta_{i,j}$. Other quantities, like the MAP (mode) of the variance can similarly be obtained. TMRCAs are defined in units of *coalescence time*, which are equivalent to units of $N_e$ generations. This means that, if you want to convert posteriors to # of generations, you would need to estimate $N_e$ from the scaled mutation rate (estimated from the data) and the unscaled mutation rate, which must be obtained from another source.
 
 In `meta`, useful properties are:
 - `output_positions` - a list of genomic positions at which TMRCA posteriors were inferred
