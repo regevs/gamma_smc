@@ -56,8 +56,7 @@ cd gamma_smc && make bin/gamma_smc
 A minimal command line is:
 <pre>
 $ bin/gamma_smc 
-    -m <i>scaled_mutation_rate</i> 
-    -r <i>scaled_recombination_rate</i>
+    -t <i>recombination_to_mutation_ratio</i>
     -i <i>input_file.vcf</i>
     -o <i>output_file.zst</i>
 </pre>
@@ -101,9 +100,10 @@ Provides a global mask file that applies to all samples, e.g. a species-wide map
 </pre>
 You may want to have a different mask per sample, for example, if samples vary significantly by their calling coverage or quality along the genome. In this case you can instead supply a tab-separated text file, each line containing first the sample name (as specified in the VCF) and second a path to a bed file of the corresponding mask.
 
-**Note**: Specifying a separate mask per sample may slow down inference, since now Gamma-SMC needs to calculate the intersection of each pair of masks. In many applications, a single global mask will suffice.
+**Note**: Specifying a separate mask per sample may slow down inference, since now Gamma-SMC needs to calculate the intersection of each pair of masks. For many applications, a single global mask will suffice.
 
 ## Mutation rate
+If the scaled mutation rate is not specified, it will be estimated from the data as the average heterzygosity across the samples, taking only masked regions into consideration, if a mask is provided. Otherwise, it can be specified explicitly. This is necessary to compare posterior inference across datasets, or across subsets of the same dataset, etc.
 <pre>
 --scaled_mutation_rate, -m <i>theta</i>
 </pre>
@@ -111,9 +111,10 @@ Gamma-SMC requires the scaled mutation rate, defined as $\theta = 4\cdot N_e \cd
 - $\mu$ is the (unscaled) mutation rate, in units of mutations per generation per base-pair
 - $N_e$ is the effective population size, given as a number of diploids
 
-Gamma-SMC is fairly robust to mis-specification of this argument, but it should be in the same ballpark as the true value. For humans (esp. of European ancestry), $\theta = 0.00075$ is a good estimate. You can also estimate this using Watterson's estimator.
+Gamma-SMC is fairly robust to mis-specification of this argument, but it should be in the same ballpark as the true value. For humans (esp. of European ancestry), $\theta = 0.00075$ is a good estimate. 
 
 ## Recombination rate
+The scaled recombination rate currently cannot be estimated from the data. To specify it, you can either specify it explicitly, or specify the recombination-to-mutation rate ratio.
 <pre>
 --scaled_recombination_rate, -r <i>rho</i>
 </pre>
@@ -124,6 +125,11 @@ Gamma-SMC also requires the scaled recombination rate, defined as $\rho = 4\cdot
 Gamma-SMC is also robust to mis-specification of this argument, but it should be in the same ballpark as the true value. For humans (esp. of European ancestry), $\rho = 0.0006$ is a good estimate. 
 
 If you have an estimate of $\mu, r$ and also an estimate of $\theta$ (perhaps from the data), you can extract get an estimate for $\rho = \theta/\mu\cdot r$.
+
+<pre>
+--recombination_to_mutation_ratio, -t <i>rho</i>
+</pre>
+The ratio of the recombination rate and the mutation rate. This is convenient when the scaled mutation rate is estimated from the data.
 
 ## Flow field
 <pre>
@@ -175,6 +181,7 @@ alphas, betas, meta = reader.open_posteriors("/path/to/output_file.zst")
 The returned `alphas` and `betas` are pandas dataframes, and `meta` is a dictionary describing the dataset. The posterior distribution of the TMRCA at the $i$-th position, for the $j$-th pair, is described by $\Gamma(\alpha_{i,j}, \beta_{i,j})$, where $\alpha_{i,j}$ can be obtained by `alphas.iloc[i,j]`, and same for $\beta_{i,j}$. From this one can obtain, e.g. the mean posterior TMRCA, by $\alpha_{i,j}/\beta_{i,j}$. Other quantities, like the MAP (mode) of the variance can similarly be obtained. TMRCAs are defined in units of *coalescence time*, which are equivalent to units of $2N_e$ generations. This means that, if you want to convert posteriors to # of generations, you would need to estimate $2N_e$ from the scaled mutation rate (estimated from the data) and the unscaled mutation rate, which must be obtained from another source.
 
 In `meta`, useful properties are:
+- `scaled_mutation_rate` and `scaled_recombination_rate`
 - `output_positions` - a list of genomic positions at which TMRCA posteriors were inferred
 - `pairs` - the order of pairs for which posteriors were inferred, using serial numbers (e.g. `0_1`)
 - `sample_names` - a mapping from a serial number a the sample name; e.g. `sample_names = {0: "sample_name.0", 1: "sample_name.1", 2: "another_sample_name.0", ...}` 
