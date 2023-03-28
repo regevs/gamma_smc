@@ -25,6 +25,7 @@ class CachedPairwiseGammaSMC {
     const vector<unique_ptr<SegregatingSite>>& _sites;
     const vector<pair<int, int>>& _haplotype_pairs;
     float _scaled_recombination_rate;
+    float _scaled_mutation_rate;
     unique_ptr<FlowFieldCache> _flow_field_cache;
     DataProcessor& _data_processor;
     int _posterior_every;    
@@ -78,6 +79,7 @@ class CachedPairwiseGammaSMC {
         const vector<unique_ptr<SegregatingSite>>& sites,
         const vector<pair<int, int>>& haplotype_pairs,
         float scaled_recombination_rate,
+        float scaled_mutation_rate,
         unique_ptr<FlowFieldCache> flow_field_cache,  // TODO: Do we really need unique_ptr rather than const&
         DataProcessor& data_processor,
         int posterior_every,
@@ -92,6 +94,7 @@ class CachedPairwiseGammaSMC {
         _sites(sites), 
         _haplotype_pairs(haplotype_pairs),
         _scaled_recombination_rate(scaled_recombination_rate),
+        _scaled_mutation_rate(scaled_mutation_rate), 
         _flow_field_cache(move(flow_field_cache)),
         _data_processor(data_processor),
         _posterior_every(posterior_every),
@@ -537,6 +540,10 @@ class CachedPairwiseGammaSMC {
 
     void output_raw_header() {           
         (*_output_file_raw_header) << "{\n";
+
+        // Write the scaled mutation and recombination rates
+        (*_output_file_raw_header) << boost::format("\t\"scaled_mutation_rate\": %.10f,\n") % _scaled_mutation_rate;        
+        (*_output_file_raw_header) << boost::format("\t\"scaled_recombination_rate\": %.10f,\n") % _scaled_recombination_rate;        
 
         // Write the sequence length
         (*_output_file_raw_header) << boost::format("\t\"sequence_length\": %ld,\n") % _seq_length;        
