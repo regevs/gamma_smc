@@ -140,6 +140,53 @@ class DataProcessor {
         }
     }
 
+    float calculate_heterozygosity_for_sample(int n_sample) {
+        const vector<pair<int, int>>* mask;
+            if (is_global_mask()) {
+                mask = &_global_mask;
+            } else {
+                mask = &(_mask_map.at(_sample_names[n_sample]));
+            };
+
+        // Count hets not missing and not in mask
+        int n_hets = 0;
+        for (uint n_seg_site = 0; n_seg_site < _sites.size(); n_seg_site++) {
+            // If missing, skip
+            if ((_sites[n_seg_site]->alleles[2 * n_sample] == -1) || (_sites[n_seg_site]->alleles[2 * n_sample + 1] == -1)) {
+                continue;
+            }
+
+            // If hom, skip
+            if (_sites[n_seg_site]->alleles[2 * n_sample] == _sites[n_seg_site]->alleles[2 * n_sample + 1]) {
+                continue;
+            }
+
+            // If masked, skip
+            if (_is_seg_site_missing[n_sample][n_seg_site]) {
+                continue;
+            }
+
+            // Otherwise, count
+            n_hets++;            
+        }
+        
+        // Count number of sites in mask
+        int n_total_sites = 0;
+        for (auto& interval : *mask) {
+            n_total_sites += (interval.second-interval.first);
+        }
+
+        return ((float) n_hets) / n_total_sites;
+    }
+
+    float calculate_heterozygosity() {
+        float theta = 0.0;
+        for (uint n_sample = 0; n_sample < _sample_names.size(); n_sample++) {
+            theta += calculate_heterozygosity_for_sample(n_sample);
+        }
+        return theta / _sample_names.size();
+    }
+
     void intersect_masks(
         const vector<pair<int, int>>& mask1,
         const vector<pair<int, int>>& mask2,

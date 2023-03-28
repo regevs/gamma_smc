@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
     //
     po::options_description desc("Allowed options");
     desc.add_options()
-        ("scaled_mutation_rate,m", po::value<float>()->required(), "Scaled mutation rate")
+        ("scaled_mutation_rate,m", po::value<float>(), "Scaled mutation rate")
         ("scaled_recombination_rate,r", po::value<float>()->required(), "Scaled recombination rate")
         ("flow_field,f", po::value<string>(), "Flow field file")
         ("input,i", po::value<string>()->required(), "Input file")
@@ -60,10 +60,13 @@ int main(int argc, char** argv) {
     //
     // Validate flags
     //
-    float scaled_mutation_rate = vm["scaled_mutation_rate"].as<float>();
-    if (scaled_mutation_rate < 0) {
-        cout << "Error: --scaled_mutation_rate must be positive." << endl;
-        exit(-1);
+    float scaled_mutation_rate = -1;
+    if (vm.count("scaled_mutation_rate")) {
+        scaled_mutation_rate = vm["scaled_mutation_rate"].as<float>();
+        if (scaled_mutation_rate < 0) {
+            cout << "Error: --scaled_mutation_rate must be positive." << endl;
+            exit(-1);
+        }
     }
 
     float scaled_recombination_rate = vm["scaled_recombination_rate"].as<float>();
@@ -226,6 +229,19 @@ int main(int argc, char** argv) {
         boost::format("Created %d segments, with %d output positions.") % data_processor._n_segments % data_processor._seq_length
     ));
 
+    screen.print_done();
+
+    //
+    // Estimated scaled mutation rate if needed
+    //
+    if (vm.count("scaled_mutation_rate") == 0) {
+        screen.print_subtitle("Estimating scaled mutation rate...");
+
+        scaled_mutation_rate = data_processor.calculate_heterozygosity();
+        
+        screen.print_item(boost::str(boost::format("Estimated scaled mutation rate: %f") % scaled_mutation_rate));
+        screen.print_done();        
+    }
     
     //
     // Create a list of pairs to work on
