@@ -70,6 +70,10 @@ There are more options. Below we discuss each in detail.
 </pre>
 The input file is in `vcf`, `vcf.gz`, `bcf` or `bcf.gz` formats. 
 
+Use a separate file per chromosome.
+
+Positions that are not specified explicitly in the `vcf` are assumed to be homozygous (unless masked out). It is therefore better and faster to process the `vcf` such that all sites are segregating (i.e. there is at least one derived allele in the sample). 
+
 ## Specifying a subset of samples
 If no option is specified, all the samples in the input file will be used.
 <pre>
