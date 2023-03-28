@@ -27,7 +27,8 @@ int main(int argc, char** argv) {
     po::options_description desc("Allowed options");
     desc.add_options()
         ("scaled_mutation_rate,m", po::value<float>(), "Scaled mutation rate")
-        ("scaled_recombination_rate,r", po::value<float>()->required(), "Scaled recombination rate")
+        ("scaled_recombination_rate,r", po::value<float>(), "Scaled recombination rate")
+        ("recombination_to_mutation_ratio,t", po::value<float>(), "Recombination to mutation rates ratio")
         ("flow_field,f", po::value<string>(), "Flow field file")
         ("input,i", po::value<string>()->required(), "Input file")
         ("mask,a", po::value<string>(), "File of a global mask (empty for no mask)")
@@ -69,10 +70,32 @@ int main(int argc, char** argv) {
         }
     }
 
-    float scaled_recombination_rate = vm["scaled_recombination_rate"].as<float>();
-    if (scaled_recombination_rate < 0) {
-        cout << "Error: --scaled_recombination_rate must be positive." << endl;
-        exit(-1);
+    if ((vm.count("scaled_recombination_rate") > 0) && (vm.count("recombination_to_mutation_ratio") > 0)) {
+        cout << "Error: --scaled_recombination_rate and --recombination_to_mutation_ratio are mutually exclusive." << endl;
+        exit(-1);    
+    }
+
+    if ((vm.count("scaled_recombination_rate") == 0) && (vm.count("recombination_to_mutation_ratio") == 0)) {
+        cout << "Error: Either --scaled_recombination_rate or --recombination_to_mutation_ratio must be specified." << endl;
+        exit(-1);    
+    }
+
+    float scaled_recombination_rate;
+    if (vm.count("scaled_recombination_rate")) {
+        scaled_recombination_rate = vm["scaled_recombination_rate"].as<float>();
+        if (scaled_recombination_rate < 0) {
+            cout << "Error: --scaled_recombination_rate must be positive." << endl;
+            exit(-1);
+        }
+    }
+
+    float recombination_to_mutation_ratio = -1;
+    if (vm.count("recombination_to_mutation_ratio")) {
+        recombination_to_mutation_ratio = vm["recombination_to_mutation_ratio"].as<float>();
+        if (recombination_to_mutation_ratio < 0) {
+            cout << "Error: --recombination_to_mutation_ratio must be positive." << endl;
+            exit(-1);
+        }
     }
 
     string flow_field_filename;
@@ -234,14 +257,19 @@ int main(int argc, char** argv) {
     //
     // Estimated scaled mutation rate if needed
     //
+    screen.print_subtitle("Calculating rates...");
     if (vm.count("scaled_mutation_rate") == 0) {
-        screen.print_subtitle("Estimating scaled mutation rate...");
-
+        screen.print_item("Estimating mutation rate...");
         scaled_mutation_rate = data_processor.calculate_heterozygosity();
-        
-        screen.print_item(boost::str(boost::format("Estimated scaled mutation rate: %f") % scaled_mutation_rate));
-        screen.print_done();        
     }
+
+    if (vm.count("recombination_to_mutation_ratio")) {
+        scaled_recombination_rate = scaled_mutation_rate * recombination_to_mutation_ratio;
+    }
+
+    screen.print_item(boost::str(boost::format("Scaled mutation rate: %f") % scaled_mutation_rate));
+    screen.print_item(boost::str(boost::format("Scaled recombination rate: %f") % scaled_recombination_rate));
+    screen.print_done();        
     
     //
     // Create a list of pairs to work on
