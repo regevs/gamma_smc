@@ -109,9 +109,9 @@ You may want to have a different mask per sample, for example, if samples vary s
 </pre>
 Gamma-SMC requires the scaled mutation rate, defined as $\theta = 4\cdot N_e \cdot \mu$, where:
 - $\mu$ is the (unscaled) mutation rate, in units of mutations per generation per base-pair
-- $N_e$ is the effective population size, given as a number of haploids
+- $N_e$ is the effective population size, given as a number of diploids
 
-Gamma-SMC is fairly robust to mis-specification of this argument, but it should be in the same ballpark as the true value. For humans (esp. of European ancestry), $\theta = 0.000375$ is a good estimate. You can also estimate this using Watterson's estimator.
+Gamma-SMC is fairly robust to mis-specification of this argument, but it should be in the same ballpark as the true value. For humans (esp. of European ancestry), $\theta = 0.00075$ is a good estimate. You can also estimate this using Watterson's estimator.
 
 ## Recombination rate
 <pre>
@@ -119,9 +119,9 @@ Gamma-SMC is fairly robust to mis-specification of this argument, but it should 
 </pre>
 Gamma-SMC also requires the scaled recombination rate, defined as $\rho = 4\cdot N_e \cdot r$, where:
 - $r$ is the (unscaled) recombination rate, in units of recombinations per generation per base-pair
-- $N_e$ is the effective population size, given as a number of haploids
+- $N_e$ is the effective population size, given as a number of diploids
 
-Gamma-SMC is also robust to mis-specification of this argument, but it should be in the same ballpark as the true value. For humans (esp. of European ancestry), $\rho = 0.0003$ is a good estimate. 
+Gamma-SMC is also robust to mis-specification of this argument, but it should be in the same ballpark as the true value. For humans (esp. of European ancestry), $\rho = 0.0006$ is a good estimate. 
 
 If you have an estimate of $\mu, r$ and also an estimate of $\theta$ (perhaps from the data), you can extract get an estimate for $\rho = \theta/\mu\cdot r$.
 
@@ -172,7 +172,7 @@ import reader
 
 alphas, betas, meta = reader.open_posteriors("/path/to/output_file.zst")
 ```
-The returned `alphas` and `betas` are pandas dataframes, and `meta` is a dictionary describing the dataset. The posterior distribution of the TMRCA at the $i$-th position, for the $j$-th pair, is described by $\Gamma(\alpha_{i,j}, \beta_{i,j})$, where $\alpha_{i,j}$ can be obtained by `alphas.iloc[i,j]`, and same for $\beta_{i,j}$. From this one can obtain, e.g. the mean posterior TMRCA, by $\alpha_{i,j}/\beta_{i,j}$. Other quantities, like the MAP (mode) of the variance can similarly be obtained. TMRCAs are defined in units of *coalescence time*, which are equivalent to units of $N_e$ generations. This means that, if you want to convert posteriors to # of generations, you would need to estimate $N_e$ from the scaled mutation rate (estimated from the data) and the unscaled mutation rate, which must be obtained from another source.
+The returned `alphas` and `betas` are pandas dataframes, and `meta` is a dictionary describing the dataset. The posterior distribution of the TMRCA at the $i$-th position, for the $j$-th pair, is described by $\Gamma(\alpha_{i,j}, \beta_{i,j})$, where $\alpha_{i,j}$ can be obtained by `alphas.iloc[i,j]`, and same for $\beta_{i,j}$. From this one can obtain, e.g. the mean posterior TMRCA, by $\alpha_{i,j}/\beta_{i,j}$. Other quantities, like the MAP (mode) of the variance can similarly be obtained. TMRCAs are defined in units of *coalescence time*, which are equivalent to units of $2N_e$ generations. This means that, if you want to convert posteriors to # of generations, you would need to estimate $2N_e$ from the scaled mutation rate (estimated from the data) and the unscaled mutation rate, which must be obtained from another source.
 
 In `meta`, useful properties are:
 - `output_positions` - a list of genomic positions at which TMRCA posteriors were inferred

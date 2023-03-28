@@ -330,7 +330,6 @@ int main(int argc, char** argv) {
         input_sites,
         haplotype_pairs,
         scaled_recombination_rate,
-        scaled_mutation_rate,
         move(FFC),
         data_processor,
         output_at_stride,

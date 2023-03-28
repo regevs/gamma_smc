@@ -636,7 +636,7 @@ class FlowFieldCache {
                     );
 
                     // Update hom observation
-                    beta_log10 = add_const(beta_log10, 2 * _scaled_mutation_rate);
+                    beta_log10 = add_const(beta_log10,  _scaled_mutation_rate);
 
                     alpha_beta_to_mean_cv_log10(                        
                         alpha_log10,
@@ -700,7 +700,7 @@ class FlowFieldCache {
                     );
 
                     // Update hom observation
-                    beta_log10 = add_const(beta_log10, 2 * _scaled_mutation_rate);
+                    beta_log10 = add_const(beta_log10,  _scaled_mutation_rate);
 
                     alpha_beta_to_mean_cv_log10(                        
                         alpha_log10,
@@ -768,7 +768,7 @@ class FlowFieldCache {
 
                     // hom 
                     //beta = add_const(beta, _scaled_mutation_rate);
-                    beta_log10 = add_const(beta_log10, 2 * _scaled_mutation_rate);
+                    beta_log10 = add_const(beta_log10,  _scaled_mutation_rate);
 
                     // if ((n_step == 999) && (row == 5) && (col >= 8)) {
                     //     cout << boost::format("*** %d %d alpha_log10, beta_log10 = %f %f\n")
