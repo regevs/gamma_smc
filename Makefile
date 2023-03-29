@@ -18,11 +18,11 @@ all: bin/gamma_smc
 
 bin/gamma_smc: src/gamma_smc.o
 	mkdir -p bin
-	$(CXX) -o $@ $(LDFLAGS) $(LDFLAGS_MAIN) $<
+	$(CXX) -o $@ $< $(LDFLAGS) $(LDFLAGS_MAIN) 
 
 bin/generate_canonical_flow_field: src/generate_canonical_flow_field.o
 	mkdir -p bin
-	$(CXX) -o $@ $(LDFLAGS) $(LDFLAGS_FF) $<
+	$(CXX) -o $@ $< $(LDFLAGS) $(LDFLAGS_FF)
 
 clean:
 	rm -f src/*.o
