@@ -32,5 +32,10 @@ ENV LD_LIBRARY_PATH=/zstd-1.5.4/lib:/usr/local/lib
 RUN wget -q https://github.com/regevs/gamma_smc/releases/download/v0.1-alpha/gamma_smc-v0.1-alpha.zip && \
     unzip gamma_smc-v0.1-alpha.zip && \
     cd gamma_smc-main && \
-    make
+    make && \
+    cp /gamma_smc-main/bin/gamma_smc /usr/local/bin/gamma_smc
+
+# Define entry point
+ENTRYPOINT ["gamma_smc"]
+
     
