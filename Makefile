@@ -1,10 +1,10 @@
 CXX=g++
 
-CXXFLAGS =	-std=c++14  -Wall -DNDEBUG -O3 -g -ffast-math -funsafe-math-optimizations -fno-math-errno \
+CXXFLAGS =	-std=c++17  -Wall -DNDEBUG -O3 -g -ffast-math -funsafe-math-optimizations -fno-math-errno \
 			-mavx2 -mfma -march=native -ftree-vectorize -msse -msse2 -msse3 -pipe -faligned-new  \
 			-Wno-unused-variable -Wno-strict-aliasing 
 
-LDFLAGS =	-O3 -g -lm  -lboost_program_options -lboost_filesystem
+LDFLAGS =	-O3 -g -lm -lstdc++fs
 LDFLAGS_MAIN = -lhts -lzstd
 LDFLAGS_FF = -larb -lflint -lpthread -lgsl -lgslcblas
 
@@ -29,7 +29,7 @@ clean:
 	rm -f bin/*
 
 src/generate_canonical_flow_field.o: 
-src/gamma_smc.o: src/io.h src/common.h src/flow_field.h src/gamma_smc.h src/data_processor.h src/sys.h src/screenoutput.h src/indicators.h
+src/gamma_smc.o: src/cxxopts.hpp src/io.h src/common.h src/flow_field.h src/gamma_smc.h src/data_processor.h src/sys.h src/screenoutput.h src/indicators.h
 
 
 

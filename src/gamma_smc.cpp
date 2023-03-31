@@ -6,6 +6,7 @@
 #include "gamma_smc.h"
 #include "data_processor.h"
 #include "screenoutput.h"
+#include "cxxopts.hpp"
 
 int main(int argc, char** argv) {
     ScreenOutput screen;
@@ -24,39 +25,37 @@ int main(int argc, char** argv) {
     //
     // Parse flags
     //
-    po::options_description desc("Allowed options");
-    desc.add_options()
-        ("scaled_mutation_rate,m", po::value<float>(), "Scaled mutation rate")
-        ("scaled_recombination_rate,r", po::value<float>(), "Scaled recombination rate")
-        ("recombination_to_mutation_ratio,t", po::value<float>(), "Recombination to mutation rates ratio")
-        ("flow_field,f", po::value<string>(), "Flow field file")
-        ("input,i", po::value<string>()->required(), "Input file")
-        ("mask,a", po::value<string>(), "File of a global mask (empty for no mask)")
-        ("masks_per_sample,b", po::value<string>(), "File of masks filenames per sample (empty for no masks)")
-        ("output,o", po::value<string>(), "Output file")
-        ("samples,S", po::value<string>(), "Filename of a list of subset of samples to take")
-        ("samples_against,T", po::value<string>(), "Filename of a second list of subset of samples to take, to infer against first list")
-        ("only_within,w", "Apply only to haplotype pairs within each diploid")
-        ("output_at_stride,s", po::value<int>()->default_value(-1), "Output at positions which are multiples of this number")
-        ("output_at_hets,h", po::value<bool>()->default_value(true), "Output at segregating sites")
-        ("cache_size,z", po::value<int>()->default_value(1000), "Maximum cache size in basepairs")
-        ("only_forward,y", "Calculate only forward pass")
-        ("only_backward,d", "Calculate only backward pass")
-        ("zstd_compression_level", po::value<int>()->default_value(1), "zstd compression level")
-        ("help", "Produce help message")
+    cxxopts::Options options("Gamma-SMC", "Fast inference of pairwise coalescence times");
+
+    options.add_options()
+        ("i,input", "Input file", cxxopts::value<std::string>())
+        ("o,output", "Output file", cxxopts::value<std::string>())
+        ("m,scaled_mutation_rate", "Scaled mutation rate", cxxopts::value<float>())
+        ("r,scaled_recombination_rate", "Scaled recombination rate", cxxopts::value<float>())
+        ("t,recombination_to_mutation_ratio", "Recombination to mutation rates ratio", cxxopts::value<float>())
+        ("f,flow_field", "Flow field file", cxxopts::value<std::string>())
+        ("a,mask", "File of a global mask (empty for no mask)", cxxopts::value<std::string>())
+        ("b,masks_per_sample", "File of masks filenames per sample (empty for no masks)", cxxopts::value<std::string>())
+        ("S,samples", "Filename of a list of subset of samples to take", cxxopts::value<std::string>())
+        ("T,samples_against", "Filename of a second list of subset of samples to take, to infer against first list", cxxopts::value<std::string>())
+        ("w,only_within", "Apply only to haplotype pairs within each diploid")
+        ("s,output_at_stride", "Output at positions which are multiples of this number", cxxopts::value<int>()->default_value("-1"))
+        ("h,output_at_hets", "Output at segregating sites", cxxopts::value<bool>()->default_value("true"))
+        ("z,cache_size", "Maximum cache size in basepairs", cxxopts::value<int>()->default_value("1000"))
+        ("y,only_forward", "Calculate only forward pass", cxxopts::value<bool>()->default_value("false"))
+        ("d,only_backward", "Calculate only backward pass", cxxopts::value<bool>()->default_value("false"))
+        ("zstd_compression_level", "zstd compression level", cxxopts::value<int>()->default_value("1"))
+        ("help", "Produce help message", cxxopts::value<bool>()->default_value("false"))
     ;
 
-    po::variables_map vm;
-    po::store(po::command_line_parser(argc, argv).options(desc).run(), vm);
+    auto vm = options.parse(argc, argv);
 
     // Check for --help or --version here, before notify
     if (vm.count("help")) {
-        std::cout << desc << "\n";
+        std::cout << options.help() << "\n";
         exit(-1);
     }
     
-    po::notify(vm);
-
     //
     // Validate flags
     //
@@ -100,21 +99,30 @@ int main(int argc, char** argv) {
     string flow_field_filename;
     if (vm.count("flow_field")) {
         flow_field_filename = vm["flow_field"].as<string>();
-        if (!boost::filesystem::exists(flow_field_filename)) {
+        if (!std::filesystem::exists(flow_field_filename)) {
             cout << boost::format("Error: Cannot open --flow_field file: %s\n") % flow_field_filename;
             exit(-1);
         }
     }
 
+    if (vm.count("input") == 0) {
+        cout << boost::format("Error: --input required.\n");
+        exit(-1);
+    }
+
     string input_filename = vm["input"].as<string>();
-    if (!boost::filesystem::exists(input_filename)) {
+    if (!std::filesystem::exists(input_filename)) {
         cout << boost::format("Error: Cannot open --input file: %s\n") % input_filename;
         exit(-1);
     }
 
+    if (vm.count("output") == 0) {
+        cout << boost::format("Error: --output required.\n");
+        exit(-1);
+    }
     auto output_filename = vm["output"].as<string>();
-    auto output_directory = boost::filesystem::path(output_filename).remove_filename();
-    boost::filesystem::create_directories(output_directory);
+    auto output_directory = std::filesystem::path(output_filename).parent_path();
+    std::filesystem::create_directories(output_directory);
     
     if (vm.count("only_within") && vm.count("samples_against")) {
         cout << "Error: --only_within and --samples_file_against are mutually exclusive." << endl;
@@ -132,7 +140,7 @@ int main(int argc, char** argv) {
     string mask_filename;
     if (vm.count("mask")) {
         mask_filename = vm["mask"].as<string>();
-        if (!boost::filesystem::exists(mask_filename)) {
+        if (!std::filesystem::exists(mask_filename)) {
             cout << boost::format("Error: Cannot open --mask file: %s\n") % mask_filename;
             exit(-1);
         }
@@ -141,7 +149,7 @@ int main(int argc, char** argv) {
     string masks_per_sample_filename;
     if (vm.count("masks_per_filename")) {
         masks_per_sample_filename = vm["masks_per_filename"].as<string>();
-        if (!boost::filesystem::exists(masks_per_sample_filename)) {
+        if (!std::filesystem::exists(masks_per_sample_filename)) {
             cout << boost::format("Error: Cannot open --masks_per_filename file: %s\n") % masks_per_sample_filename;
             exit(-1);
         }
@@ -150,7 +158,7 @@ int main(int argc, char** argv) {
     string samples_filename;
     if (vm.count("samples")) {
         samples_filename = vm["samples"].as<string>();
-        if (!boost::filesystem::exists(samples_filename)) {
+        if (!std::filesystem::exists(samples_filename)) {
             cout << boost::format("Error: Cannot open --samples file: %s\n") % samples_filename;
             exit(-1);
         }
@@ -159,7 +167,7 @@ int main(int argc, char** argv) {
     string samples_against_filename;
     if (vm.count("samples_against")) {
         samples_against_filename = vm["samples_against"].as<string>();
-        if (!boost::filesystem::exists(samples_against_filename)) {
+        if (!std::filesystem::exists(samples_against_filename)) {
             cout << boost::format("Error: Cannot open --samples_against file: %s\n") % samples_against_filename;
             exit(-1);
         }
