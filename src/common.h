@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <unordered_map>
 #include <filesystem>
+#include <cstring>
 
 #include <boost/assert.hpp>
 #include <boost/format.hpp>
