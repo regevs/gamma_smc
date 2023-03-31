@@ -45,7 +45,6 @@ class CachedPairwiseGammaSMC {
     int _n_segments;
     position_t _seq_length;
 
-    ostream* _output_file;
     ofstream* _output_file_raw_header;
     ostream* _output_file_raw;
 
@@ -86,7 +85,6 @@ class CachedPairwiseGammaSMC {
         bool output_at_hets,
         bool only_forward,
         bool only_backward,
-        ostream* output_file,
         ofstream* output_file_raw_header,
         ostream* output_file_raw,
         int zstd_compression_level
@@ -109,7 +107,6 @@ class CachedPairwiseGammaSMC {
         _segments(data_processor._segments),
         _n_segments(data_processor._n_segments),
         _seq_length(data_processor._seq_length),
-        _output_file(output_file),
         _output_file_raw_header(output_file_raw_header),
         _output_file_raw(output_file_raw),
         _zstd_cctx(ZSTD_createCCtx()),        
@@ -469,74 +466,6 @@ class CachedPairwiseGammaSMC {
         }
     }
 
-    void output_header() {
-        /*output_file << "position";
-        
-        int i, j;
-        for (int n_pair = 0; n_pair < _n_pairs; n_pair++) {
-            tie(i, j) = _haplotype_pairs[n_pair];
-
-            output_file << 
-                boost::format("\tposterior_alpha_%d_%d\tposterior_beta_%d_%d")
-                    % i % j % i % j;            
-        }
-        output_file << "\n";*/
-
-        *_output_file << "# sample_names = {";
-        uint i = 0;
-        for (auto& sample_name : _data_processor._sample_names) {
-            (*_output_file) << (boost::format("%d: \"%s.0\", %d: \"%s.1\"%s") 
-                % (i*2) 
-                % sample_name 
-                % (i*2+1)
-                % sample_name
-                % ((i == _data_processor._sample_names.size() - 1) ? "" : ", ")
-            );   
-            i++;
-        }
-        *_output_file << "}\n";
-
-        *_output_file << "pair";
-        for (uint i = 0; i < _seq_length; i++) {
-            *_output_file << "\t" << _output_positions[i];  
-        }
-        *_output_file << "\n";
-
-    }
-
-   void output_chunk(long starting_n_pair, long num_pairs) {
-        /*for (uint i = 0; i < _seq_length; i++) {
-            output_file << _output_positions[i]; 
-            for (int n_pair = 0; n_pair < _n_pairs; n_pair++) {
-                uint64_t idx = i * _n_pairs_rounded_up + n_pair;
-                output_file                    
-                    << "\t" << _posteriors_alpha[idx] << "\t" << _posteriors_beta[idx]; 
-            }  
-            output_file << "\n";
-        }
-        */
-       int i, j;
-       for (int n_pair = starting_n_pair; n_pair < min(_n_pairs, starting_n_pair + num_pairs); n_pair++) {        
-            tie(i, j) = _haplotype_pairs[n_pair];
-
-            // Output a row of alphas
-            *_output_file << boost::format("posterior_alpha_%d_%d") % i % j;
-            for (uint t = 0; t < _seq_length; t++) {
-                *_output_file << "\t" << _posteriors_alpha[t * num_pairs + (n_pair - starting_n_pair)];  
-            }
-            *_output_file << "\n";
-
-            // Output a row of betas
-            *_output_file << boost::format("posterior_beta_%d_%d") % i % j;
-            for (uint t = 0; t < _seq_length; t++) {
-                *_output_file << "\t" << _posteriors_beta[t * num_pairs + (n_pair - starting_n_pair)];                  
-            }
-            
-            *_output_file << "\n";
-       }
-       
-    }
-
 
     void output_raw_header() {           
         (*_output_file_raw_header) << "{\n";
@@ -619,10 +548,6 @@ class CachedPairwiseGammaSMC {
         std::chrono::duration<float, std::milli> ms_float; 
 
 
-        if (_output_file != NULL) {
-            output_header();
-        }
-
         if (_output_file_raw != NULL) {
             output_raw_header();
         }
@@ -674,14 +599,6 @@ class CachedPairwiseGammaSMC {
                 t2 = std::chrono::high_resolution_clock::now();
                 ms_float = t2 - t1;
                 _timer_backward += (ms_float.count()/1000);
-            }
-
-            if (_output_file != NULL) {
-                t1 = std::chrono::high_resolution_clock::now();
-                output_chunk(n_pair, _n_pairs_in_chunk);
-                t2 = std::chrono::high_resolution_clock::now();
-                ms_float = t2 - t1;
-                _timer_output += (ms_float.count()/1000);
             }
 
             if (_output_file_raw != NULL) {

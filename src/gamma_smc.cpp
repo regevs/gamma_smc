@@ -33,7 +33,6 @@ int main(int argc, char** argv) {
         ("input,i", po::value<string>()->required(), "Input file")
         ("mask,a", po::value<string>(), "File of a global mask (empty for no mask)")
         ("masks_per_sample,b", po::value<string>(), "File of masks filenames per sample (empty for no masks)")
-        ("output_text", po::value<string>(), "Output file in text format (recommended only for small datasets!)")
         ("output,o", po::value<string>(), "Output file")
         ("samples,S", po::value<string>(), "Filename of a list of subset of samples to take")
         ("samples_against,T", po::value<string>(), "Filename of a second list of subset of samples to take, to infer against first list")
@@ -146,13 +145,6 @@ int main(int argc, char** argv) {
             cout << boost::format("Error: Cannot open --masks_per_filename file: %s\n") % masks_per_sample_filename;
             exit(-1);
         }
-    }
-
-    string output_text_filename;
-    if (vm.count("output_text")) {
-        output_text_filename = vm["output_text"].as<string>();
-        auto output_text_directory = boost::filesystem::path(output_text_filename).remove_filename();
-        boost::filesystem::create_directories(output_text_directory);
     }
 
     string samples_filename;
@@ -329,16 +321,6 @@ int main(int argc, char** argv) {
     // Prepare output files
     //
     // TODO: Check errors
-    ostream* out = NULL;
-    ofstream* output_file = NULL;
-    boost::iostreams::filtering_streambuf<boost::iostreams::output> outbuf;
-    if (vm.count("output_text")) {        
-        output_file = new ofstream(output_text_filename, ios_base::out | ios_base::binary);        
-        outbuf.push(boost::iostreams::gzip_compressor());
-        outbuf.push(*output_file);
-        out = new ostream(&outbuf);
-    }
-
     ofstream* output_file_raw_meta = NULL;
     ofstream* output_file_raw = NULL;
     if (output_filename.size() > 0) {
@@ -381,7 +363,6 @@ int main(int argc, char** argv) {
         output_at_hets,
         only_forward,
         only_backward,
-        out,
         output_file_raw_meta,
         output_file_raw,
         vm["zstd_compression_level"].as<int>()
@@ -392,11 +373,6 @@ int main(int argc, char** argv) {
     //
     // Close output files
     //
-    if (out != NULL) {
-        boost::iostreams::close(outbuf); // Don't forget this!
-        output_file->close();
-    }
-
     if (output_file_raw != NULL) {
         output_file_raw->close();
         output_file_raw_meta->close();
