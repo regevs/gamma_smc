@@ -4,6 +4,7 @@
 #include <fstream>
 #include <utility>
 #include <stdexcept>
+#include <exception>
 #include <memory>
 #include <chrono>
 #include <algorithm>

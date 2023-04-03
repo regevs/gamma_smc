@@ -277,8 +277,18 @@ void readVcf(
     
     // Read samples list, if available
     if (samples_filename.size() > 0) {
-        ifstream indata;
-        indata.open(samples_filename);        
+        ifstream indata;                
+        try {
+            indata.open(samples_filename);
+            if (indata.fail()) {
+                cout << boost::format("Error in ifstream::open - %s\n") % samples_filename;
+                exit(-1);
+            }            
+        } catch (const std::ios_base::failure& ex) {
+            cout << "Caught exception: " << ex.what() << std::endl;
+            exit(-1);
+        }
+
         string line;
         while (getline(indata, line)) {
             boost::algorithm::trim(line);
@@ -289,7 +299,17 @@ void readVcf(
     // Read second samples list, if available
     if (samples_filename_against.size() > 0) {
         ifstream indata;
-        indata.open(samples_filename_against);        
+        try {
+            indata.open(samples_filename_against);
+            if (indata.fail()) {
+                cout << boost::format("Error in ifstream::open - %s\n") % samples_filename_against;
+                exit(-1);                
+            }            
+        } catch (const std::ios_base::failure& ex) {
+            cout << "Caught exception: " << ex.what() << std::endl;
+            exit(-1);
+        }
+
         string line;
         while (getline(indata, line)) {
             boost::algorithm::trim(line);
@@ -304,7 +324,16 @@ void readVcf(
 
     // TODO CHECK ERRORS
     auto file = hts_open(filename.c_str(), "r");
+    if (file == NULL) {
+        cout << boost::format("Error in hts_open - %s\n") % filename;
+        exit(-1);                
+    }    
+    
     auto header = bcf_hdr_read(file);
+    if (header == NULL) {
+        cout << boost::format("Error in bcf_hdr_read\n");
+        exit(-1);                
+    } 
 
     if (required_samples.size() > 0) {
         string list_of_samples = boost::algorithm::join(required_samples, ",");
@@ -316,8 +345,17 @@ void readVcf(
     }
 
     auto record = bcf_init();
+    if (header == NULL) {
+        cout << boost::format("Error in bcf_init\n");
+        exit(-1);                
+    } 
 
     int n_samples = bcf_hdr_nsamples(header);
+    if (n_samples == 0) {
+        cout << boost::format("Error: bcf_hdr_nsamples returned 0\n");
+        exit(-1);    
+    }
+
     int n_relevant_sample = 0;
     vector<bool> sample_is_required;
     for (int i = 0; i < n_samples; i++) {
@@ -382,7 +420,7 @@ void readVcf(
         // Get genotypes
         ngt = bcf_get_genotypes(header, record, &gt_arr, &ngt_arr);
         if (ngt <= 0) {
-            std::cerr << "No genotypes!" << std::endl;
+            cout << "No genotypes!" << std::endl;
             return;
         }
 
