@@ -174,7 +174,7 @@ int main(int argc, char** argv) {
     }
 
     int output_at_stride = vm["output_at_stride"].as<int>();
-    bool output_at_hets = (vm.count("output_at_hets") > 0) && (vm["output_at_hets"].as<bool>());
+    bool output_at_hets = vm["output_at_hets"].as<bool>();
     if (!output_at_hets && (output_at_stride == -1)) {
         cout << "Warning: No output flags provided.\n";
     }
