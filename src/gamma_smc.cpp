@@ -122,7 +122,9 @@ int main(int argc, char** argv) {
     }
     auto output_filename = vm["output"].as<string>();
     auto output_directory = std::filesystem::path(output_filename).parent_path();
-    std::filesystem::create_directories(output_directory);
+    if (!output_directory.empty()) {
+        std::filesystem::create_directories(output_directory);
+    }
     
     if (vm.count("only_within") && vm.count("samples_against")) {
         cout << "Error: --only_within and --samples_file_against are mutually exclusive." << endl;
