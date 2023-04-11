@@ -61,6 +61,8 @@ $ bin/gamma_smc
     -o <i>output_file.zst</i>
 </pre>
 
+When finishing successfully, `output_file.zst` is a binary file which can be opened as described below.
+
 There are more options. Below we discuss each in detail.
 
 # Full Usage
