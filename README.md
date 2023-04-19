@@ -61,6 +61,8 @@ $ bin/gamma_smc
     -o <i>output_file.zst</i>
 </pre>
 
+When finishing successfully, `output_file.zst` is a binary file which can be opened as described below.
+
 There are more options. Below we discuss each in detail.
 
 # Full Usage
@@ -165,7 +167,7 @@ The function `open_posteriors` in `src/reader.py` is used to parse the binary fi
 ## Specifying output positions
 Inferring the posterior TMRCA distribution at each and every position is too computationally expensive and not needed. Gamma-SMC therefore supports outputting in two schemes: (i) at segregating sites; (ii) in fixed jumps along the genome. Both schemes can be used concurrently.
 <pre>
---output_at_hets, -h
+--output_at_hets, -h <i>or</i> --output_at_hets=false
 </pre>
 Output at segregating sites - these are assumed to be all the sites in your input file. This is the default.
 
