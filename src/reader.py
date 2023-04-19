@@ -6,10 +6,7 @@ import json
 def open_posteriors(filename):
     meta = json.load(open(filename + ".meta"))
     raw_floats = np.frombuffer(
-        zstandard.ZstdDecompressor().decompress(
-            open(filename, "rb").read(),
-            max_output_size = meta["sequence_length"] * meta["num_pairs"] * 2 * 4,
-        ),
+        zstandard.ZstdDecompressor().stream_reader(open(filename, "rb").read()).read(),
         dtype=np.float32
     )
 
