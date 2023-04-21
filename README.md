@@ -154,7 +154,7 @@ $ bin/generate_canonical_flow_field ...
 <pre>
 --cache_size, -z <i>cache_size</i>
 </pre>
-Gamma-SMC caches operating on stretches of homozygosity or missingness for fast inference. Larger cache may result in faster running times, but in slower startup time and somewhat larger memory footprint. Note that there is little advantage in increasing cache size above the typical distance between segregating sites in your sample. Defaults to 1000.
+Gamma-SMC caches operating on stretches of homozygosity or missingness for fast inference. Larger cache may result in faster running times, but in slower startup time and somewhat larger memory footprint. Note that there is little advantage in increasing cache size above the typical distance between segregating sites in your sample. Defaults to 1000 basepairs.
 
 ## Output
 <pre>
@@ -177,7 +177,7 @@ Output at segregating sites - these are assumed to be all the sites in your inpu
 Output every <i>jump_size</i> basepairs. Turned off by default. A good value is `-s 1000` or `-s 100`; smaller values will probably be too long to run and generate huge files.
 
 # Interpreting the output
-Use `open_posteriors` from `src/reader.py` to open the output:
+Use `open_posteriors` from `src/reader.py` to open the output (in Python):
 ```Python
 import sys; sys.path.append("/path/to/git/gamma_smc/src")
 import reader
