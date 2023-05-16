@@ -70,7 +70,7 @@ class DataProcessor {
             // While we can't jump to the next site within the cache
             while (jump_to_pos - n_pos > _flow_field_cache_n_steps) {
                 _segments.push_back({
-                    n_pos,                                  // pos
+                    n_pos + _flow_field_cache_n_steps,      // pos
                     _flow_field_cache_n_steps,              // segment length
                     HOM_STRETCH,                            // segment type - meaningless default here; TODO: Remove field?
                     prev_to_output,                         // output at start
@@ -87,7 +87,7 @@ class DataProcessor {
 
             // Now we can jump
             _segments.push_back({
-                n_pos,                          // pos
+                jump_to_pos,                       // pos
                 (int) jump_to_pos - n_pos,    // segment length
                 HOM_STRETCH,                     // segment type - meaningless default here; TODO: Remove field?
                 prev_to_output,     // output at start
