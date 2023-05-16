@@ -40,9 +40,7 @@ class ScreenOutput {
 
     public:
         ScreenOutput() {
-            struct winsize size;
-            ioctl(STDOUT_FILENO, TIOCGWINSZ, &size);
-            n_columns = std::min(size.ws_col, static_cast<short unsigned int>(70));
+            n_columns = 70; 
             T = std::chrono::high_resolution_clock::now();
         }
 
