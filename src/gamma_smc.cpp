@@ -287,13 +287,19 @@ int main(int argc, char** argv) {
         if (samples_against_indices.size()) {
             for (int i : samples_indices) {
                 for (int j : samples_against_indices) {
-                    haplotype_pairs.push_back(make_pair(i, j));
+                    haplotype_pairs.push_back(make_pair(2 * i, 2 * j));
+                    haplotype_pairs.push_back(make_pair(2 * i, 2 * j + 1));
+                    haplotype_pairs.push_back(make_pair(2 * i + 1, 2 * j));
+                    haplotype_pairs.push_back(make_pair(2 * i + 1, 2 * j + 1));
                 }
             }
         } else {
             for (int i = 0; i < n_haplotypes; i++) {
                 for (int j = i+1; j < n_haplotypes; j++) {
-                    haplotype_pairs.push_back(make_pair(i, j));
+                    haplotype_pairs.push_back(make_pair(2 * i, 2 * j));
+                    haplotype_pairs.push_back(make_pair(2 * i, 2 * j + 1));
+                    haplotype_pairs.push_back(make_pair(2 * i + 1, 2 * j));
+                    haplotype_pairs.push_back(make_pair(2 * i + 1, 2 * j + 1));
                 }
             }
         }
