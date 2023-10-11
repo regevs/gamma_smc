@@ -277,10 +277,10 @@ int main(int argc, char** argv) {
     // Create a list of pairs to work on
     //
     vector<pair<int, int>> haplotype_pairs;
-    int n_haplotypes = sample_names.size() * 2;
-
+    uint n_samples = sample_names.size();
+    
     if (vm.count("only_within")) {
-        for (uint i = 0; i < sample_names.size(); i++) {
+        for (uint i = 0; i < n_samples; i++) {
             haplotype_pairs.push_back(make_pair(2*i, 2*i+1));
         }
     } else {
@@ -294,8 +294,9 @@ int main(int argc, char** argv) {
                 }
             }
         } else {
-            for (int i = 0; i < n_haplotypes; i++) {
-                for (int j = i+1; j < n_haplotypes; j++) {
+            for (uint i = 0; i < n_samples; i++) {
+                haplotype_pairs.push_back(make_pair(2 * i, 2 * i + 1));
+                for (uint j = i+1; j < n_samples; j++) {
                     haplotype_pairs.push_back(make_pair(2 * i, 2 * j));
                     haplotype_pairs.push_back(make_pair(2 * i, 2 * j + 1));
                     haplotype_pairs.push_back(make_pair(2 * i + 1, 2 * j));
