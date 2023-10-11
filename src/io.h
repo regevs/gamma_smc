@@ -490,8 +490,12 @@ void readMask(
     string filename,
     vector<pair<int, int>>& global_mask
 ) {
-    fstream bedfile(filename);
-    // TODO: check errors
+    ifstream bedfile;
+    bedfile.open(filename);
+    if (!bedfile.is_open() || !bedfile.good()) {
+        cout << boost::format("Error: Cannot open file %s\n") % filename;
+        exit(-1);
+    }
 
     string bedline;
     while (getline(bedfile, bedline)) {
@@ -507,8 +511,12 @@ void readMasks(
     const vector<string>& sample_names
     ) 
     {
-    ifstream fin(filename);
-    // TODO: check errors
+    ifstream fin;
+    fin.open(filename);
+    if (!fin.is_open() || !fin.good()) {
+        cout << boost::format("Error: Cannot open file %s\n") % filename;
+        exit(-1);
+    }
 
     string line;
     while (getline(fin, line)) {

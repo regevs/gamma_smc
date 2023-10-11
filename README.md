@@ -7,7 +7,6 @@ Both functionality and documentation are in progress, and will be updated prior 
 ## Requirements
 
 `gamma_smc` requires the following to be installed in your system to compile:
-
 - [Boost](https://www.boost.org/) (tested with version 1.74)
 - [htslib](https://github.com/samtools/htslib) (tested with version 1.15)
 - [zstd](https://facebook.github.io/zstd/) (tested with version 1.5.2)
@@ -16,12 +15,50 @@ This is needed to parse the raw data:
 - [zstandard](https://github.com/indygreg/python-zstandard) (tested with version 0.19.0)
 - [pandas](https://pandas.pydata.org/) (tested with version 1.4.1) 
 
-An easy way to manage these installations is using `conda`:
+### Manual installation
+These command should install the prerequisites directly. Change the directories to your preferred location, where you have permissions or where it makes sense. 
+```
+export INSTALL_DIR=/path/to/install/dir
+
+# Install boost. This may take some time.
+wget https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_1_81_0.tar.bz2 && \
+    tar xjf boost_1_81_0.tar.bz2 --checkpoint=.100 && \
+    cd ./boost_1_81_0 && \
+    ./bootstrap.sh --with-libraries=filesystem,iostreams,system,program_options --prefix=${INSTALL_DIR} && \
+    ./b2 -j 8 install && \
+    cd ..
+    
+# Install zstd.
+wget -q https://github.com/facebook/zstd/releases/download/v1.5.4/zstd-1.5.4.tar.gz && \
+    tar xvf zstd-1.5.4.tar.gz && \
+    cd zstd-1.5.4 && \
+    make -j 8 && \
+    cd ..
+    
+# Install htslib
+wget https://github.com/samtools/htslib/releases/download/1.17/htslib-1.17.tar.bz2 && \
+    tar xjf htslib-1.17.tar.bz2 --checkpoint=.100 && \
+    cd htslib-1.17 && \
+    ./configure --prefix=${INSTALL_DIR} && \
+    make -j 8 && \
+    make install && \
+    cd ..
+    
+# Add paths to environmental variables. Consider adding these lines to ~/.bashrc
+export GAMMA_SMC_INCLUDE_PATHS=${INSTALL_DIR}/include:${INSTALL_DIR}/zstd-1.5.4/lib/
+export GAMMA_SMC_LIB_PATHS=${INSTALL_DIR}/lib:${INSTALL_DIR}/zstd-1.5.4/lib/
+export CPATH=$GAMMA_SMC_INCLUDE_PATHS:$CPATH
+export LIBRARY_PATH=$GAMMA_SMC_LIB_PATHS:$LIBRARY_PATH
+export LD_LIBRARY_PATH=$GAMMA_SMC_LIB_PATHS:$LD_LIBRARY_PATH
+```
+
+### Conda 
+You could try to manage these installations is using `conda`:
 ```
 conda create --name gamma_smc -y python
 conda activate gamma_smc
-conda install --name gamma_smc --channel conda-forge boost-cpp>=1.74 zstd==1.5.2 zstandard==0.19.0
-conda install --name gamma_smc --channel bioconda htslib>=1.15
+conda install --name gamma_smc --channel conda-forge boost-cpp==1.81 zstd==1.5.2 zstandard==0.19.0
+conda install --name gamma_smc --channel bioconda htslib==1.17
 conda install --name gamma_smc pandas
 export CPATH=$CONDA_PREFIX/include:$CPATH
 export LIBRARY_PATH=$CONDA_PREFIX/lib:$LIBRARY_PATH
