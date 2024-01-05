@@ -167,7 +167,7 @@ Gamma-SMC also requires the scaled recombination rate, defined as $\rho = 4\cdot
 
 Gamma-SMC is also robust to mis-specification of this argument, but it should be in the same ballpark as the true value. For humans (esp. of European ancestry), $\rho = 0.0006$ is a good estimate. 
 
-If you have an estimate of $\mu, r$ and also an estimate of $\theta$ (perhaps from the data), you can extract get an estimate for $\rho = \theta/\mu\cdot r$.
+If you have an estimate of $\mu, r$ and also an estimate of $\theta$ (perhaps from the data), you can extract an estimate for $\rho = \theta/\mu\cdot r$.
 
 <pre>
 --recombination_to_mutation_ratio, -t <i>rho</i>
