@@ -1,12 +1,20 @@
-FROM ubuntu:18.04
-RUN apt-get update && apt-get -y upgrade
-RUN apt-get -y -qq install wget unzip make gcc g++ zlib1g-dev libbz2-dev liblzma-dev
+FROM ubuntu:24.04
 
-# Download and install boost
+RUN apt-get update && apt-get -y upgrade
+RUN apt-get -y -qq install wget unzip make gcc-12 g++-12 bzip2 zlib1g-dev libbz2-dev liblzma-dev
+
+# Install the g++/gcc defaults
+RUN update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 100 && \
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 100 && \
+    update-alternatives --install /usr/bin/cc gcc /usr/bin/gcc-12 100    
+
+# Download boost
 RUN wget -q https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_1_81_0.tar.bz2 && \
-    tar xjf boost_1_81_0.tar.bz2 && \
-    cd ./boost_1_81_0 && \
-    ./bootstrap.sh --with-libraries=filesystem,iostreams,system,program_options && \
+    tar xjf boost_1_81_0.tar.bz2
+
+# Install boost
+RUN cd ./boost_1_81_0 && \
+    ./bootstrap.sh --with-libraries=filesystem,iostreams,system,program_options --with-toolset=gcc && \
     ./b2 -j 8 install
 
 # Download and install zstd
@@ -28,12 +36,11 @@ ENV CPATH=/zstd-1.5.4/lib:/htslib-1.17
 ENV LIBRARY_PATH=/zstd-1.5.4/lib:/usr/local/lib
 ENV LD_LIBRARY_PATH=/zstd-1.5.4/lib:/usr/local/lib
 
-# Download and install Gamma-SMC
-RUN wget -q https://github.com/regevs/gamma_smc/releases/download/v0.1-alpha/gamma_smc-v0.1-alpha.zip && \
-    unzip gamma_smc-v0.1-alpha.zip && \
-    cd gamma_smc-main && \
+# Copy and build Gamma-SMC
+COPY . /home/
+RUN cd /home/ &&\
     make && \
-    cp /gamma_smc-main/bin/gamma_smc /usr/local/bin/gamma_smc
+    cp /home/bin/gamma_smc /usr/local/bin/gamma_smc
 
 # Define entry point
 ENTRYPOINT ["gamma_smc"]
