@@ -1,10 +1,12 @@
 # Getting Started
 
-Both functionality and documentation are in progress, and will be updated prior to publication.
-
 # Installation
 
 ## Requirements
+
+`gamma_smc` requires the following to run:
+- The linux OS
+- A processor that supports AVX2 instructions (run `lscpu | grep avx2` to confirm)
 
 `gamma_smc` requires the following to be installed in your system to compile:
 - [Boost](https://www.boost.org/) (tested with version 1.74)
