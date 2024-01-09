@@ -55,11 +55,9 @@ export LD_LIBRARY_PATH=$GAMMA_SMC_LIB_PATHS:$LD_LIBRARY_PATH
 ### Conda 
 You could try to manage these installations is using `conda`:
 ```
-conda create --name gamma_smc -y python
+conda create --name gamma_smc --yes python=3.11
 conda activate gamma_smc
-conda install --name gamma_smc --channel conda-forge boost-cpp==1.81 zstd==1.5.2 zstandard==0.19.0
-conda install --name gamma_smc --channel bioconda htslib==1.17
-conda install --name gamma_smc pandas
+conda install --yes --name gamma_smc --channel conda-forge boost-cpp==1.81 zstd==1.5.2 zstandard==0.19.0 htslib==1.18 pandas gxx==13.2
 export CPATH=$CONDA_PREFIX/include:$CPATH
 export LIBRARY_PATH=$CONDA_PREFIX/lib:$LIBRARY_PATH
 export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
