@@ -1,4 +1,6 @@
 .vscode/*
+.git/*
 bin/*
 *.o
+src/*.o
 *.sif

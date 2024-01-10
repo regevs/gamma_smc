@@ -1,7 +1,9 @@
 CXX=g++
 
+MARCH = native
 CXXFLAGS =	-std=c++17  -Wall -DNDEBUG -O3 -g -ffast-math -funsafe-math-optimizations -fno-math-errno \
-			-mavx2 -mfma -march=native -ftree-vectorize -msse -msse2 -msse3 -pipe -faligned-new  \
+			-pipe -faligned-new  \
+			-mavx2 -march=$(MARCH) -mfma -ftree-vectorize -msse -msse2 -msse3 \
 			-Wno-unused-variable -Wno-strict-aliasing 
 
 LDFLAGS =	-O3 -g -lm -lstdc++fs
