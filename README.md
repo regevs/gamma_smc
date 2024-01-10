@@ -8,17 +8,39 @@
 - The linux OS
 - A processor that supports AVX2 instructions (run `lscpu | grep avx2` to confirm)
 
+This is needed to parse the raw data:
+- [zstandard](https://github.com/indygreg/python-zstandard) (tested with version 0.19.0)
+- [pandas](https://pandas.pydata.org/) (tested with version 1.4.1) 
+
+## Option 1: Singularity (no compilation, preferred)
+The simplest way to run `gamma_smc` is through a container, using `singularity` (or Docker, if you have root permissions), e.g.:
+<pre>
+$ singularity run 
+    -B <i>local_dir</i>:<i>container_dir</i> 
+    docker://docker.io/regevsch/gamma_smc:v0.2 
+    -i <i>container_path</i> 
+    -o <i>container_path</i>
+    <i>other arguments</i>
+</pre>
+
+For example,
+<pre>
+$ singularity run 
+    -B /home/regev:/mnt
+    docker://docker.io/regevsch/gamma_smc:v0.2 
+    -i /mnt/input.vcf.gz 
+    -o /mnt/output.zst 
+    -t 1
+</pre>
+
+## Option 2: Compilation
 `gamma_smc` requires the following to be installed in your system to compile:
 - [Boost](https://www.boost.org/) (tested with version 1.74)
 - [htslib](https://github.com/samtools/htslib) (tested with version 1.15)
 - [zstd](https://facebook.github.io/zstd/) (tested with version 1.5.2)
 
-This is needed to parse the raw data:
-- [zstandard](https://github.com/indygreg/python-zstandard) (tested with version 0.19.0)
-- [pandas](https://pandas.pydata.org/) (tested with version 1.4.1) 
-
 ### Manual installation
-These command should install the prerequisites directly. Change the directories to your preferred location, where you have permissions or where it makes sense. 
+These commands should install the prerequisites directly. Change the directories to your preferred location, where you have permissions or where it makes sense. 
 ```
 export INSTALL_DIR=/path/to/install/dir
 
@@ -55,7 +77,7 @@ export LD_LIBRARY_PATH=$GAMMA_SMC_LIB_PATHS:$LD_LIBRARY_PATH
 ```
 
 ### Conda 
-You could try to manage these installations is using `conda`:
+You could try to manage these installations using `conda`:
 ```
 conda create --name gamma_smc --yes python=3.11
 conda activate gamma_smc
@@ -73,8 +95,7 @@ To generate a flow field yourself (see below), you also need:
 - [Eigen](https://eigen.tuxfamily.org/) (tested with version 3.4.0)
 
 
-## Compilation
-
+### How to compile
 Make sure that the installation paths are set, e.g. by appending `include` paths to the `CPATH` environmental variable, and `lib` paths to `LIBRARY_PATH` and `LD_LIBRARY_PATH` environmental variables. 
 
 To compile, you need: 
@@ -89,7 +110,6 @@ cd gamma_smc && make bin/gamma_smc
 ```
 
 # Minimal Usage
-
 A minimal command line is:
 <pre>
 $ bin/gamma_smc 
