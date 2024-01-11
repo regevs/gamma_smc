@@ -88,13 +88,6 @@ export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
 ```
 This creates a new environment, installs the requirements and adds their paths to the relevant environmental variables as required below.
 
-To generate a flow field yourself (see below), you also need:
-
-- [Arb](https://arblib.org/) and its prerequisites mpfr, flint (tested with version 2.22.0)
-- [GSL](https://www.gnu.org/software/gsl/) (tested with version 2.7)
-- [Eigen](https://eigen.tuxfamily.org/) (tested with version 3.4.0)
-
-
 ### How to compile
 Make sure that the installation paths are set, e.g. by appending `include` paths to the `CPATH` environmental variable, and `lib` paths to `LIBRARY_PATH` and `LD_LIBRARY_PATH` environmental variables. 
 
@@ -198,7 +191,13 @@ The ratio of the recombination rate and the mutation rate. This is convenient wh
 <pre>
 --flow_field, -f <i>flow_field.txt</i>
 </pre>
-A path to the flow field specification. Gamma-SMC requires a flow field as input to work. If unspecified, a default one is used (hard-coded), which is also available for reference at `resources/default_flow_field.txt`. Thich should be reasonable for most use cases. If you want to generate a new one, you may compile with
+A path to the flow field specification. Gamma-SMC requires a flow field as input to work. If unspecified, a default one is used (hard-coded), which is also available for reference at `resources/default_flow_field.txt`. This should be reasonable for most use cases. If you want to generate a new one, you also need to install:
+
+- [Arb](https://arblib.org/) and its prerequisites mpfr, flint (tested with version 2.22.0)
+- [GSL](https://www.gnu.org/software/gsl/) (tested with version 2.7)
+- [Eigen](https://eigen.tuxfamily.org/) (tested with version 3.4.0)
+
+You may compile with
 ```
 $ make bin/generate_canonical_flow_field
 ```
@@ -241,7 +240,7 @@ import reader
 
 alphas, betas, meta = reader.open_posteriors("/path/to/output_file.zst")
 ```
-The returned `alphas` and `betas` are pandas dataframes, and `meta` is a dictionary describing the dataset. The posterior distribution of the TMRCA at the $i$-th position, for the $j$-th pair, is described by $\Gamma(\alpha_{i,j}, \beta_{i,j})$, where $\alpha_{i,j}$ can be obtained by `alphas.iloc[i,j]`, and same for $\beta_{i,j}$. From this one can obtain, e.g. the mean posterior TMRCA, by $\alpha_{i,j}/\beta_{i,j}$. Other quantities, like the MAP (mode) of the variance can similarly be obtained. TMRCAs are defined in units of *coalescence time*, which are equivalent to units of $2N_e$ generations. This means that, if you want to convert posteriors to # of generations, you would need to estimate $2N_e$ from the scaled mutation rate (estimated from the data) and the unscaled mutation rate, which must be obtained from another source.
+The returned `alphas` and `betas` are pandas dataframes, and `meta` is a dictionary describing the dataset. The posterior distribution of the TMRCA at the $i$-th position, for the $j$-th pair, is described by $\Gamma(\alpha_{i,j}, \beta_{i,j})$, where $\alpha_{i,j}$ can be obtained by `alphas.iloc[i,j]`, and same for $\beta_{i,j}$. From this one can obtain, e.g. the mean posterior TMRCA, by $\alpha_{i,j}/\beta_{i,j}$. Other quantities, like the MAP (mode) or the variance can similarly be obtained. TMRCAs are defined in units of *coalescence time*, which are equivalent to units of $2N_e$ generations. This means that, if you want to convert posteriors to # of generations, you would need to estimate $2N_e$ from the scaled mutation rate (estimated from the data) and the unscaled mutation rate, which must be obtained from another source.
 
 In `meta`, useful properties are:
 - `scaled_mutation_rate` and `scaled_recombination_rate`
