@@ -100,7 +100,7 @@ To compile, you need:
 
 Download and compile with:
 ```
-git clone https://github.com/regevs/gamma_smc
+git clone git@github.com:regevs/gamma_smc.git
 cd gamma_smc && make bin/gamma_smc
 ```
 
@@ -235,6 +235,11 @@ Output at segregating sites - these are assumed to be all the sites in your inpu
 Output every <i>jump_size</i> basepairs. Turned off by default. A good value is `-s 1000` or `-s 100`; smaller values will probably be too long to run and generate huge files.
 
 # Interpreting the output
+If you haven't already, clone the repository:
+```
+git clone git@github.com:regevs/gamma_smc.git
+```
+
 Use `open_posteriors` from `src/reader.py` to open the output (in Python):
 ```Python
 import sys; sys.path.append("/path/to/git/gamma_smc/src")
