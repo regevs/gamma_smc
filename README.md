@@ -8,7 +8,7 @@
 - The linux OS
 - A processor that supports AVX2 instructions (run `lscpu | grep avx2` to confirm)
 
-This is needed to parse the raw data:
+The following Python packages are needed to parse the raw data:
 - [zstandard](https://github.com/indygreg/python-zstandard) (tested with version 0.19.0)
 - [pandas](https://pandas.pydata.org/) (tested with version 1.4.1) 
 
