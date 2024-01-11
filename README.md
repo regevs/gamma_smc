@@ -33,6 +33,8 @@ $ singularity run
     -t 1
 </pre>
 
+**Note**: Using a container is easier but is somewhat slower (e.g. due to optimizing compilation to your specific processor).
+
 ## Option 2: Compilation
 `gamma_smc` requires the following to be installed in your system to compile:
 - [Boost](https://www.boost.org/) (tested with version 1.74)
